@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cinzel+Decorative:wght@700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IM+Fell+English:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 
 <style>
   :root{
@@ -637,7 +637,20 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-BB3hKbKWOc9Ez/TAwyWxNXeoV9c1v6FIeYiBieIWkpLjauysF18NzgR1MBNBXf8/KABdlkX68nAhlwcDFLGPCQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- Leaflet 1.9.4, served from this repo. It was previously loaded from a CDN
+     with an SRI hash that did not match the file, so browsers downloaded the
+     script and then refused to run it, leaving the whole page inert. -->
+<script src="vendor/leaflet/leaflet.js"></script>
+<script>
+/* Fail loudly rather than silently: without Leaflet every control below is dead. */
+if (typeof L === 'undefined'){
+  document.getElementById('map').innerHTML =
+    '<div style="padding:24px;font-family:Georgia,serif;color:#241C15;max-width:34em;margin:auto;text-align:center">' +
+    '<h2 style="font-size:1.1rem;margin:0 0 8px">The map could not load</h2>' +
+    '<p style="font-size:0.95rem;line-height:1.5;margin:0">The mapping library (vendor/leaflet/leaflet.js) failed to load, ' +
+    'so the atlas cannot start. Reloading the page usually fixes it.</p></div>';
+}
+</script>
 <script>
 /* =====================================================================
    THE ATLAS OF ROBINSON CRUSOE
