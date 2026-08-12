@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><meta name="color-scheme" content="light dark">
 <title>The Atlas of Robinson Crusoe — Places &amp; Timeline</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,6 +33,8 @@
     --font-quote: 'IM Fell English', serif;
     --font-ui: 'Inter', sans-serif;
 
+    --sb-w: 330px;
+
     --r-sm: 3px;
     --r-md: 6px;
     --shadow-1: 0 2px 10px rgba(13,22,38,0.25);
@@ -47,6 +49,12 @@
     background: var(--navy-deep);
     color: var(--ink);
     overflow:hidden;
+    -webkit-text-size-adjust:100%;
+    overscroll-behavior:none;
+  }
+  /* Touch: kill the grey flash, and never let a :hover style stick after a tap. */
+  button, .catchip, .ev-mini, .ipt, #islandEventStrip button{
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* ============ THEME MODES ============
@@ -57,9 +65,15 @@
   /* ---------------- APP SHELL ---------------- */
   #app{
     display:grid;
-    grid-template-rows: auto 1fr auto;
-    height:100vh;
-    width:100vw;
+    /* Without an explicit column the implicit `auto` track sizes to the widest
+       row's max-content, so a header that cannot fit stretches the whole shell
+       past the screen and pushes its own controls out of reach. */
+    grid-template-columns: minmax(0,1fr);
+    grid-template-rows: auto minmax(0,1fr) auto;
+    height:100vh;          /* fallback for browsers without dvh */
+    height:100dvh;         /* iOS Safari: excludes the collapsing URL bar */
+    width:100%;
+    overflow:hidden;
   }
 
   /* ---------------- HEADER ---------------- */
@@ -73,6 +87,7 @@
     gap:18px;
     border-bottom: 1px solid rgba(176,141,87,0.45);
     z-index:500;
+    min-width:0;
   }
   header#top .crest{ flex:0 0 auto; width:46px; height:46px; opacity:0.92; }
   header#top .titles{ flex:1 1 auto; min-width:0; }
@@ -96,38 +111,55 @@
     padding:7px 10px; border-radius: var(--r-sm); cursor:pointer;
     transition: background .15s, transform .1s;
   }
-  .modebtn:hover{ background: rgba(176,141,87,0.22); }
+  @media (hover:hover){
+    .modebtn:hover{ background: rgba(176,141,87,0.22); }
+    #islandBtn:hover{ filter:brightness(1.1); }
+  }
   .modebtn.active{ background: var(--brass); color: var(--navy-deep); border-color: var(--brass); }
   .modebtn:active{ transform: translateY(1px); }
   #islandBtn{
     background: var(--rust); border-color: var(--rust); color: var(--white);
     font-family: var(--font-display); letter-spacing:0.03em;
+    white-space:nowrap;
   }
-  #islandBtn:hover{ filter:brightness(1.1); }
+  /* Drawer handle — desktop uses the edge toggle instead. */
+  #navToggle{
+    display:none;
+    flex:0 0 auto;
+    width:42px; height:42px; align-items:center; justify-content:center;
+    background: rgba(237,227,207,0.08);
+    border:1px solid rgba(176,141,87,0.55); border-radius: var(--r-sm);
+    color: var(--brass-lt); font-size:18px; line-height:1; cursor:pointer;
+  }
+  #navToggle[aria-expanded="true"]{ background: var(--brass); color: var(--navy-deep); }
+  #themeBtns{ display:flex; align-items:center; gap:8px; }
 
   /* ---------------- MAIN LAYOUT ---------------- */
   #main{
     position:relative;
     display:grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(0,1fr);
     min-height:0;
+    min-width:0;
   }
 
   /* ---------------- SIDEBAR ---------------- */
   #sidebar{
     position:relative;
-    width: 330px;
-    max-width:86vw;
+    width: var(--sb-w);
     background: var(--parchment);
     border-right: 1px solid var(--paper-line);
     overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
     transition: margin-left .22s ease;
     z-index:400;
     box-shadow: var(--shadow-2);
   }
-  #sidebar.collapsed{ margin-left: -330px; }
+  #sidebar.collapsed{ margin-left: calc(-1 * var(--sb-w)); }
+  /* Lives in #main, not #sidebar — inside the sidebar its `left:100%` position
+     was clipped away by that element's own overflow, making it unclickable. */
   #sidebarToggle{
-    position:absolute; top:12px; left:100%;
+    position:absolute; top:12px; left: var(--sb-w);
     background: var(--navy); color: var(--brass-lt);
     border:1px solid var(--brass); border-left:none;
     width:26px; height:44px; cursor:pointer;
@@ -135,7 +167,16 @@
     display:flex; align-items:center; justify-content:center;
     font-size:14px; z-index:401;
     box-shadow: var(--shadow-1);
+    transition: left .22s ease;
   }
+  #main.sb-collapsed #sidebarToggle{ left:0; }
+  #scrim{
+    position:absolute; inset:0; background:rgba(13,22,38,0.5);
+    z-index:399; border:0; padding:0; cursor:pointer;
+  }
+  #scrim[hidden]{ display:none; }
+  /* Drawer header — phone only; desktop keeps the edge toggle. */
+  #drawerBar{ display:none; }
   .sb-section{ padding:14px 16px; border-bottom:1px solid var(--paper-line); }
   .sb-section h3{
     margin:0 0 9px; font-family:var(--font-display); font-size:0.78rem;
@@ -187,12 +228,14 @@
     font-size:0.78rem; line-height:1.35; margin-bottom:3px; color:var(--ink-soft);
     border:1px solid transparent;
   }
-  .ev-mini:hover{ background: rgba(60,110,113,0.1); }
+  @media (hover:hover){ .ev-mini:hover{ background: rgba(60,110,113,0.1); } }
   .ev-mini.active{ background: rgba(176,141,87,0.22); border-color: var(--brass); color:var(--ink); }
   .ev-mini .ev-mini-date{ font-family:var(--font-ui); font-weight:600; font-size:0.68rem; color:var(--teal-dp); display:block; }
 
   /* ---------------- MAP AREA ---------------- */
-  #mapWrap{ position:relative; min-width:0; }
+  /* z-index:0 makes this a stacking context, so Leaflet's own controls (which
+     sit at z-index 800+) stay under the drawer and scrim instead of over them. */
+  #mapWrap{ position:relative; min-width:0; z-index:0; }
   #map{ position:absolute; inset:0; background:#9fc7ce; }
   .leaflet-tile-pane.antique-filter{ filter: sepia(0.55) saturate(1.55) hue-rotate(-8deg) brightness(0.93) contrast(1.08); }
   .leaflet-tile-pane.night-filter{ filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.95) saturate(0.7); }
@@ -222,7 +265,7 @@
   .badge.speculative{ background:#5a2620; color:#f0c7bf; }
   .pop .related{ margin-top:6px; display:flex; flex-wrap:wrap; gap:5px; }
   .pop .related a{ font-family:var(--font-ui); font-size:0.68rem; color:var(--teal-dp); background:rgba(60,110,113,0.12); padding:3px 7px; border-radius:20px; text-decoration:none; cursor:pointer; }
-  .pop .related a:hover{ background:rgba(60,110,113,0.24); }
+  @media (hover:hover){ .pop .related a:hover{ background:rgba(60,110,113,0.24); } }
 
   /* custom divicon marker */
   .cmark{ border-radius:50%; border:2px solid var(--white); box-shadow:0 1px 4px rgba(0,0,0,0.5); }
@@ -235,8 +278,10 @@
     background: linear-gradient(180deg, var(--navy) 0%, var(--navy-deep) 100%);
     border-top: 1px solid rgba(176,141,87,0.45);
     padding: 9px 18px 12px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
     color: var(--parchment);
     z-index:450;
+    min-width:0;
   }
   #tlTop{ display:flex; align-items:center; gap:12px; margin-bottom:6px; }
   #playBtn{
@@ -244,7 +289,7 @@
     background: var(--brass); color: var(--navy-deep); cursor:pointer; flex:0 0 auto;
     display:flex; align-items:center; justify-content:center; font-size:14px;
   }
-  #playBtn:hover{ filter:brightness(1.08); }
+  @media (hover:hover){ #playBtn:hover{ filter:brightness(1.08); } }
   #tlDateBox{ flex:0 0 auto; min-width:230px; }
   #tlNarrative{ font-family:var(--font-display); font-size:0.86rem; color:var(--brass-lt); letter-spacing:0.02em; }
   #tlCalendar{ font-family:var(--font-ui); font-size:0.7rem; color: rgba(237,227,207,0.65); }
@@ -264,22 +309,31 @@
   #islandModal.show{ display:flex; }
   #islandPanel{
     background: var(--parchment); border-radius:10px; max-width:1100px; width:100%;
+    min-width:0;
     max-height:92vh; overflow:hidden; box-shadow: var(--shadow-2);
-    display:grid; grid-template-rows:auto 1fr; border: 2px solid var(--brass);
+    display:grid;
+    /* Explicit minmax(0,…) tracks so long content scrolls inside the panel
+       instead of stretching it past the viewport. */
+    grid-template-columns: minmax(0,1fr);
+    grid-template-rows:auto minmax(0,1fr);
+    border: 2px solid var(--brass);
   }
   #islandHead{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; background:var(--navy); color:var(--brass-lt); }
   #islandHead h2{ margin:0; font-family:var(--font-display); font-size:1.15rem; letter-spacing:0.03em; }
   #islandClose{ background:none; border:1px solid var(--brass); color:var(--brass-lt); width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:15px; }
-  #islandBody{ display:grid; grid-template-columns: 1.4fr 1fr; min-height:0; overflow:hidden; }
-  #islandSvgWrap{ background:#cfe0d8; overflow:auto; display:flex; align-items:center; justify-content:center; padding:10px; }
+  /* minmax(0,…) rather than a bare 1fr: a default `min-width:auto` track can be
+     stretched by its widest content instead of scrolling it. */
+  #islandBody{ display:grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); min-height:0; overflow:hidden; }
+  #islandSvgWrap{ background:#cfe0d8; overflow:auto; display:flex; align-items:center; justify-content:center; padding:10px; min-width:0; }
   #islandSvgWrap svg{ width:100%; height:auto; max-height:74vh; }
-  #islandInfo{ padding:16px 18px; overflow-y:auto; border-left:1px solid var(--paper-line); }
+  #islandInfo{ padding:16px 18px; overflow-y:auto; border-left:1px solid var(--paper-line); min-width:0; overflow-wrap:break-word; }
   #islandInfo h3{ font-family:var(--font-display); margin:0 0 4px; color:var(--navy); font-size:1.05rem; }
   #islandInfo .pop-dates{ font-family:var(--font-ui); font-size:0.75rem; color:var(--ink-soft); margin-bottom:8px; }
   #islandInfo p{ font-size:0.94rem; line-height:1.5; }
   .ipt{ cursor:pointer; }
   .ipt circle{ transition: r .12s; }
-  .ipt:hover circle, .ipt.active circle{ r:10; }
+  .ipt.active circle{ r:10; }
+  @media (hover:hover){ .ipt:hover circle{ r:10; } }
   .ipt.active circle{ stroke: var(--rust); stroke-width:2.5; }
   .ipt text{ font-family:var(--font-ui); font-size:11px; fill:var(--ink); pointer-events:none; }
   #islandEventStrip{ display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
@@ -310,12 +364,131 @@
   ::-webkit-scrollbar-thumb{ background: rgba(176,141,87,0.5); border-radius:5px; }
   ::-webkit-scrollbar-track{ background: transparent; }
 
-  @media (max-width: 760px){
-    header#top h1{ font-size:1.05rem; }
+  /* Compact/drawer layout for phones in portrait AND landscape. A landscape
+     phone is ~844px wide, past a width-only breakpoint, but only ~390px tall,
+     so the short-viewport clause catches it. Keep in sync with COMPACT_MQ. */
+  @media (max-width: 900px), (max-height: 520px){
+    /* ---- HEADER: one compact row that always fits ---- */
+    header#top{ padding:8px 10px; gap:10px; }
+    #navToggle{ display:flex; }
+    header#top .crest{ display:none; }
+    header#top h1{ font-size:1rem; letter-spacing:0.03em; }
     header#top .subtitle{ display:none; }
-    #sidebar{ position:absolute; top:0; bottom:0; left:0; height:100%; }
-    #tlDateBox{ min-width:150px; }
-    #islandBody{ grid-template-columns:1fr; grid-template-rows:1fr auto; }
+    /* Theme buttons move into the drawer on mobile (see relocateThemeBtns) —
+       four header buttons cannot fit a phone width without overflowing off-screen. */
+    header#top #themeBtns{ display:none; }
+    #islandBtn{ padding:9px 11px; font-size:0.8rem; min-height:42px; }
+    #islandBtn .btn-label{ display:none; }
+
+    /* Theme buttons once re-parented into the sidebar */
+    #themeSection #themeBtns{ display:flex; flex-wrap:wrap; gap:6px; }
+    #themeSection .modebtn{ flex:1 1 auto; min-height:40px; }
+
+    /* The drawer leaves the flow, so #main must collapse to a single column —
+       otherwise #mapWrap lands in the `auto` track and sizes to 0.
+       overflow:hidden keeps the translated-away drawer clipped to the shell. */
+    #main{ grid-template-columns: 1fr; overflow:hidden; }
+
+    /* ---- SIDEBAR AS OFF-CANVAS DRAWER (closed by default) ---- */
+    #sidebar{
+      position:absolute; top:0; bottom:0; left:0; height:100%;
+      width: min(80vw, 320px);
+      margin-left:0;
+      transform: translateX(-100%);
+      transition: transform .24s ease;
+      z-index:402;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    #sidebar.open{ transform:none; }
+    #sidebar.collapsed{ margin-left:0; }   /* desktop collapse is not used here */
+    #sidebarToggle{ display:none; }        /* replaced by ☰ + ✕ + scrim on mobile */
+
+    /* The scrim strip beside a near-full-width drawer is too thin to be the
+       only way out, so the drawer carries its own close button. */
+    #drawerBar{
+      display:flex; align-items:center; justify-content:space-between;
+      position:sticky; top:0; z-index:2;
+      padding:8px 10px 8px 14px;
+      background: var(--navy); color: var(--brass-lt);
+      font-family: var(--font-display); font-size:0.8rem;
+      letter-spacing:0.06em; text-transform:uppercase;
+    }
+    #drawerClose{
+      width:40px; height:40px; flex:0 0 auto;
+      background:none; border:1px solid var(--brass); border-radius:50%;
+      color: var(--brass-lt); font-size:15px; cursor:pointer;
+    }
+
+    /* ---- TOUCH TARGETS ---- */
+    /* 16px stops iOS Safari from zooming the page on focus. */
+    #searchInput{ font-size:16px; padding:11px 12px; }
+    .catchip{ padding:11px 13px 11px 11px; font-size:0.78rem; }
+    .ev-mini{ padding:11px 10px; font-size:0.82rem; }
+    #eventList{ max-height:none; }
+    .switch{ width:46px; height:26px; }
+    .slider:before{ height:20px; width:20px; }
+    input:checked + .slider:before{ transform: translateX(20px); }
+    .sb-row{ min-height:44px; }
+    #baseStyleSelect{ font-size:16px; padding:6px; }
+
+    /* ---- MAP ---- */
+    #compassRose{ width:54px; height:54px; bottom:34px; right:10px; opacity:0.7; }
+    #mapDecor .frame{ inset:4px; }
+    /* Keep the credit line from eating a phone-sized map. */
+    .leaflet-control-attribution{ font-size:9px; line-height:1.3; padding:1px 5px; }
+
+    /* ---- TIMELINE: stack instead of overflowing off the right edge ---- */
+    #timeline{ padding:8px 10px; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    #tlTop{ flex-wrap:wrap; gap:7px; margin-bottom:0; }
+    #playBtn{ width:42px; height:42px; font-size:15px; }
+    #tlDateBox{ flex:1 1 auto; min-width:0; }
+    #tlNarrative{ font-size:0.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #tlSlider{ flex:1 1 100%; order:3; height:20px; margin:0; background:transparent; }
+    /* Taller invisible track = a thumb you can actually grab with a thumb. */
+    #tlSlider::-webkit-slider-runnable-track{ height:5px; background:rgba(237,227,207,0.22); border-radius:3px; }
+    #tlSlider::-webkit-slider-thumb{ width:22px; height:22px; margin-top:-9px; }
+    #tlSlider::-moz-range-track{ height:5px; background:rgba(237,227,207,0.22); border-radius:3px; }
+    #tlSlider::-moz-range-thumb{ width:22px; height:22px; }
+    #tlBtns{
+      order:4; flex:1 1 100%; gap:6px;
+      overflow-x:auto; -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+    }
+    #tlBtns::-webkit-scrollbar{ display:none; }
+    #tlBtns .modebtn{ flex:1 1 auto; min-height:38px; padding:8px 6px; font-size:0.68rem; }
+    #tlTicks{ display:none; }
+
+    /* ---- ISLAND MODAL: full screen ---- */
+    #islandModal{ padding:0; }
+    #islandPanel{
+      width:100%; max-width:100%; height:100dvh; max-height:100dvh;
+      border-radius:0; border:none;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    #islandHead{ padding:10px 12px; }
+    #islandHead h2{ font-size:0.95rem; }
+    #islandClose{ width:40px; height:40px; flex:0 0 auto; font-size:17px; }
+    #islandBody{ grid-template-columns: minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); overflow:hidden; }
+    #islandSvgWrap{ padding:6px; }
+    #islandSvgWrap svg{ max-height:38vh; }
+    #islandInfo{ padding:12px 14px; border-left:none; border-top:1px solid var(--paper-line); }
+    #islandEventStrip button{ padding:8px 11px; }
+  }
+
+  /* Landscape phone: short but wide, so the timeline fits on one row again
+     and the map keeps the vertical space it would otherwise lose. */
+  @media (max-height: 520px) and (min-width: 620px){
+    #tlTop{ flex-wrap:nowrap; }
+    #tlSlider{ flex:1 1 auto; order:0; }
+    #tlBtns{ order:0; flex:0 0 auto; }
+    #tlDateBox{ flex:0 0 auto; min-width:150px; }
+    #timeline{ padding-top:6px; }
+  }
+
+  /* Very narrow phones — drop the title rather than let controls overflow. */
+  @media (max-width: 360px){
+    header#top h1{ font-size:0.9rem; }
+    header#top{ gap:8px; }
   }
 </style>
 </head>
@@ -323,6 +496,7 @@
 <div id="app">
 
   <header id="top">
+    <button id="navToggle" aria-label="Show filters and events" aria-expanded="false" aria-controls="sidebar">☰</button>
     <svg class="crest" viewBox="0 0 100 100" fill="none">
       <circle cx="50" cy="50" r="46" stroke="#D9C08C" stroke-width="2.5"/>
       <path d="M50 8 L56 44 L92 50 L56 56 L50 92 L44 56 L8 50 L44 44 Z" fill="#D9C08C" opacity="0.9"/>
@@ -333,16 +507,26 @@
       <div class="subtitle">Every voyage, coast, and camp of Defoe's 1719 castaway — mapped, dated, and sourced against the text</div>
     </div>
     <div class="headctrls">
-      <button class="modebtn" id="themeParchment" data-theme="theme-parchment">Parchment</button>
-      <button class="modebtn" id="themeModern" data-theme="theme-modern">Modern</button>
-      <button class="modebtn" id="themeNight" data-theme="theme-night">Night</button>
-      <button class="modebtn" id="islandBtn">⛰ Explore the Island</button>
+      <div id="themeBtns">
+        <button class="modebtn" id="themeParchment" data-theme="theme-parchment">Parchment</button>
+        <button class="modebtn" id="themeModern" data-theme="theme-modern">Modern</button>
+        <button class="modebtn" id="themeNight" data-theme="theme-night">Night</button>
+      </div>
+      <button class="modebtn" id="islandBtn">⛰ <span class="btn-label">Explore the Island</span></button>
     </div>
   </header>
 
   <div id="main">
     <aside id="sidebar">
-      <button id="sidebarToggle" title="Toggle sidebar">◂</button>
+      <div id="drawerBar">
+        <span>Atlas controls</span>
+        <button id="drawerClose" aria-label="Close panel">✕</button>
+      </div>
+
+      <div class="sb-section" id="themeSection" hidden>
+        <h3>Theme</h3>
+        <div id="themeSlot"></div>
+      </div>
 
       <div class="sb-section">
         <h3>Search</h3>
@@ -393,6 +577,9 @@
       </div>
     </aside>
 
+    <button id="sidebarToggle" title="Toggle sidebar" aria-label="Toggle sidebar">◂</button>
+    <div id="scrim" hidden></div>
+
     <div id="mapWrap">
       <div id="map"></div>
       <div id="mapDecor">
@@ -423,9 +610,9 @@
       </div>
       <input type="range" id="tlSlider" min="0" max="1" value="0" step="1">
       <div id="tlBtns">
-        <button class="modebtn" id="btnRoute">Show Entire Route</button>
-        <button class="modebtn" id="btnFollow">Follow Crusoe</button>
-        <button class="modebtn" id="btnReset">Reset View</button>
+        <button class="modebtn" id="btnRoute" data-full="Show Entire Route" data-short="Route">Show Entire Route</button>
+        <button class="modebtn" id="btnFollow" data-full="Follow Crusoe" data-short="Follow">Follow Crusoe</button>
+        <button class="modebtn" id="btnReset" data-full="Reset View" data-short="Reset">Reset View</button>
       </div>
     </div>
     <div id="tlTicks"></div>
@@ -752,7 +939,9 @@ const TILE_URLS = {
   antique: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
   modern:  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
 };
-const map = L.map('map', { zoomControl:false, worldCopyJump:true, minZoom:2 }).setView([18, -35], 3);
+/* attributionControl:false — the custom bottom-right control below replaces the
+   default one, which otherwise renders the same credits a second time. */
+const map = L.map('map', { zoomControl:false, attributionControl:false, worldCopyJump:true, minZoom:2 }).setView([18, -35], 3);
 L.control.zoom({ position:'bottomleft' }).addTo(map);
 L.control.attribution({ position:'bottomright', prefix:false }).addTo(map);
 
@@ -816,6 +1005,13 @@ function redrawRoute(){
 }
 
 /* ---------------- POPUPS ---------------- */
+/* Leave room for Leaflet's own padding and the close button on narrow screens. */
+function popupMaxWidth(){ return Math.max(200, Math.min(290, window.innerWidth - 80)); }
+
+/* A circleMarker's hit area is the dot itself, and an 8px dot is a poor
+   target for a fingertip — grow it on touch-primary devices. */
+const TOUCH_BUMP = window.matchMedia('(pointer: coarse)').matches ? 3 : 0;
+
 function confBadgeHTML(conf){
   return `<span class="badge ${CONF_BADGE[conf]}">${CONF_LABEL[conf]}</span>`;
 }
@@ -871,7 +1067,7 @@ function renderMarkers(){
     const color = CATS[ev.category].color;
     const isMentioned = ev.visited === false;
     const marker = L.circleMarker([ev.lat, ev.lng], {
-      radius: isMentioned ? 6 : 8,
+      radius: (isMentioned ? 6 : 8) + TOUCH_BUMP,
       color: '#FBF8F1',
       weight: 2,
       fillColor: color,
@@ -879,7 +1075,7 @@ function renderMarkers(){
       dashArray: isMentioned ? '2 3' : null,
       className: 'cmark'
     }).addTo(markersLayer);
-    marker.bindPopup(buildPopupHTML(ev), { maxWidth:290 });
+    marker.bindPopup(buildPopupHTML(ev), { maxWidth: popupMaxWidth() });
     marker.on('click', () => { if (ev.order !== null) setActiveIndex(ev.order, true); });
     markerById[ev.id] = marker;
   });
@@ -899,7 +1095,7 @@ function renderMarkers(){
       const m = L.marker([t.lat, t.lng], {
         icon: L.divIcon({ className:'', html:'<div style="width:14px;height:14px;background:#EDE3CF;border:2.5px solid #A63A32;transform:rotate(45deg);box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>', iconSize:[14,14], iconAnchor:[7,7] })
       }).addTo(theoryLayer);
-      m.bindPopup(`<div class="pop"><div class="pop-eyebrow">Real-world theory</div><h4>${t.label}</h4><div class="pop-dates">${confBadgeHTML(t.confidence)}</div><p>${t.note}</p></div>`, { maxWidth:290 });
+      m.bindPopup(`<div class="pop"><div class="pop-eyebrow">Real-world theory</div><h4>${t.label}</h4><div class="pop-dates">${confBadgeHTML(t.confidence)}</div><p>${t.note}</p></div>`, { maxWidth: popupMaxWidth() });
     });
   } else {
     map.removeLayer(theoryLayer);
@@ -1025,6 +1221,7 @@ function renderEventList(){
     row.dataset.idx = i;
     row.innerHTML = `<span class="ev-mini-date">${ev.calendarDate}${ev.scope === 'island' ? ' \u00b7 \ud83c\udfdd' : ''}</span>${ev.title}`;
     row.addEventListener('click', () => {
+      closeDrawerOnMobile();
       setActiveIndex(i, true);
       if (ev.scope === 'island') openIslandModal(ev.id);
     });
@@ -1035,7 +1232,7 @@ function renderEventList(){
     const row = document.createElement('div');
     row.className = 'ev-mini';
     row.innerHTML = `<span class="ev-mini-date">Mentioned only</span>${ev.title}`;
-    row.addEventListener('click', () => jumpToEvent(ev.id));
+    row.addEventListener('click', () => { closeDrawerOnMobile(); jumpToEvent(ev.id); });
     list.appendChild(row);
   });
 }
@@ -1066,14 +1263,64 @@ document.getElementById('toggleTheories').addEventListener('change', (e) => {
 document.getElementById('baseStyleSelect').addEventListener('change', (e) => setBaseTiles(e.target.value));
 document.getElementById('sidebarToggle').addEventListener('click', () => {
   const sb = document.getElementById('sidebar');
-  sb.classList.toggle('collapsed');
-  document.getElementById('sidebarToggle').textContent = sb.classList.contains('collapsed') ? '\u25b8' : '\u25c2';
+  const collapsed = sb.classList.toggle('collapsed');
+  document.getElementById('main').classList.toggle('sb-collapsed', collapsed);
+  document.getElementById('sidebarToggle').textContent = collapsed ? '\u25b8' : '\u25c2';
+  setTimeout(() => map.invalidateSize(), 240);
 });
+
+/* ---------------- MOBILE DRAWER ----------------
+   On phones the sidebar is an off-canvas drawer over the map: it starts
+   closed so the map is visible, and is opened by the header \u2630. */
+/* Must match the compact @media query in the stylesheet. */
+const COMPACT_MQ = '(max-width: 900px), (max-height: 520px)';
+const mq = window.matchMedia(COMPACT_MQ);
+const sidebarEl = document.getElementById('sidebar');
+const scrimEl   = document.getElementById('scrim');
+const navToggle = document.getElementById('navToggle');
+
+function setDrawer(open){
+  sidebarEl.classList.toggle('open', open);
+  scrimEl.hidden = !open;
+  navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function closeDrawerOnMobile(){ if (mq.matches) setDrawer(false); }
+
+navToggle.addEventListener('click', () => setDrawer(!sidebarEl.classList.contains('open')));
+scrimEl.addEventListener('click', () => setDrawer(false));
+document.getElementById('drawerClose').addEventListener('click', () => setDrawer(false));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setDrawer(false); });
+
+/* Theme buttons live in the header on desktop and in the drawer on phones.
+   Re-parenting the existing nodes keeps their listeners intact. */
+function applyResponsiveChrome(){
+  const group   = document.getElementById('themeBtns');
+  const section = document.getElementById('themeSection');
+  const narrow  = mq.matches;
+  if (narrow){
+    document.getElementById('themeSlot').appendChild(group);
+    section.hidden = false;
+  } else {
+    document.querySelector('.headctrls').insertBefore(group, document.getElementById('islandBtn'));
+    section.hidden = true;
+    setDrawer(false);
+  }
+  /* Abbreviated labels so all three view buttons fit a phone width. */
+  document.querySelectorAll('#tlBtns .modebtn').forEach(b => {
+    b.textContent = narrow ? b.dataset.short : b.dataset.full;
+  });
+}
+mq.addEventListener('change', () => { applyResponsiveChrome(); setTimeout(() => map.invalidateSize(), 260); });
+applyResponsiveChrome();
+
+/* iOS: the URL bar collapsing and rotation both change the usable height. */
+window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 300));
+window.addEventListener('resize', () => map.invalidateSize());
 
 /* ---------------- THEMES ---------------- */
 function applyTheme(theme){
   document.body.className = theme;
-  document.querySelectorAll('.headctrls .modebtn[data-theme]').forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
+  document.querySelectorAll('.modebtn[data-theme]').forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
   if (theme === 'theme-parchment'){
     setBaseTiles('antique');
   } else if (theme === 'theme-modern'){
