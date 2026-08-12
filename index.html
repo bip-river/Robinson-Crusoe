@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Atlas of Robinson Crusoe — Places &amp; Timeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cinzel+Decorative:wght@700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IM+Fell+English:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<style>
+  :root{
+    /* ---- Naval / antique-chart palette (not the cream+terracotta default) ---- */
+    --ink:        #241C15;
+    --ink-soft:   #453728;
+    --navy:       #16233B;
+    --navy-deep:  #0D1626;
+    --navy-mid:   #223357;
+    --brass:      #B08D57;
+    --brass-lt:   #D9C08C;
+    --teal:       #3C6E71;
+    --teal-dp:    #244B4D;
+    --rust:       #A63A32;
+    --parchment:  #EDE3CF;
+    --parchment-dk: #E1D3AF;
+    --paper-line: rgba(36,28,21,0.14);
+    --white:      #FBF8F1;
+
+    --font-display: 'Cinzel', serif;
+    --font-display-dec: 'Cinzel Decorative', serif;
+    --font-body: 'EB Garamond', serif;
+    --font-quote: 'IM Fell English', serif;
+    --font-ui: 'Inter', sans-serif;
+
+    --r-sm: 3px;
+    --r-md: 6px;
+    --shadow-1: 0 2px 10px rgba(13,22,38,0.25);
+    --shadow-2: 0 8px 30px rgba(13,22,38,0.35);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family: var(--font-body);
+    background: var(--navy-deep);
+    color: var(--ink);
+    overflow:hidden;
+  }
+
+  /* ============ THEME MODES ============
+     body.theme-parchment | body.theme-modern | body.theme-night   */
+
+  button, input, select{ font-family: var(--font-ui); }
+
+  /* ---------------- APP SHELL ---------------- */
+  #app{
+    display:grid;
+    grid-template-rows: auto 1fr auto;
+    height:100vh;
+    width:100vw;
+  }
+
+  /* ---------------- HEADER ---------------- */
+  header#top{
+    position:relative;
+    background: linear-gradient(180deg, var(--navy) 0%, var(--navy-deep) 100%);
+    color: var(--parchment);
+    padding: 14px 22px 12px;
+    display:flex;
+    align-items:center;
+    gap:18px;
+    border-bottom: 1px solid rgba(176,141,87,0.45);
+    z-index:500;
+  }
+  header#top .crest{ flex:0 0 auto; width:46px; height:46px; opacity:0.92; }
+  header#top .titles{ flex:1 1 auto; min-width:0; }
+  header#top h1{
+    margin:0; font-family: var(--font-display); font-weight:600;
+    letter-spacing:0.05em; font-size: 1.55rem; color: var(--brass-lt);
+    text-shadow: 0 1px 0 rgba(0,0,0,0.4);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  header#top .subtitle{
+    margin:2px 0 0; font-family: var(--font-quote); font-style:italic;
+    font-size: 0.92rem; color: rgba(237,227,207,0.72); letter-spacing:0.01em;
+  }
+  header#top .headctrls{ display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+  .modebtn{
+    background: rgba(237,227,207,0.08);
+    border:1px solid rgba(176,141,87,0.55);
+    color: var(--brass-lt);
+    font-family: var(--font-ui); font-size:0.72rem; font-weight:600;
+    letter-spacing:0.04em; text-transform:uppercase;
+    padding:7px 10px; border-radius: var(--r-sm); cursor:pointer;
+    transition: background .15s, transform .1s;
+  }
+  .modebtn:hover{ background: rgba(176,141,87,0.22); }
+  .modebtn.active{ background: var(--brass); color: var(--navy-deep); border-color: var(--brass); }
+  .modebtn:active{ transform: translateY(1px); }
+  #islandBtn{
+    background: var(--rust); border-color: var(--rust); color: var(--white);
+    font-family: var(--font-display); letter-spacing:0.03em;
+  }
+  #islandBtn:hover{ filter:brightness(1.1); }
+
+  /* ---------------- MAIN LAYOUT ---------------- */
+  #main{
+    position:relative;
+    display:grid;
+    grid-template-columns: auto 1fr;
+    min-height:0;
+  }
+
+  /* ---------------- SIDEBAR ---------------- */
+  #sidebar{
+    position:relative;
+    width: 330px;
+    max-width:86vw;
+    background: var(--parchment);
+    border-right: 1px solid var(--paper-line);
+    overflow-y:auto;
+    transition: margin-left .22s ease;
+    z-index:400;
+    box-shadow: var(--shadow-2);
+  }
+  #sidebar.collapsed{ margin-left: -330px; }
+  #sidebarToggle{
+    position:absolute; top:12px; left:100%;
+    background: var(--navy); color: var(--brass-lt);
+    border:1px solid var(--brass); border-left:none;
+    width:26px; height:44px; cursor:pointer;
+    border-radius:0 8px 8px 0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; z-index:401;
+    box-shadow: var(--shadow-1);
+  }
+  .sb-section{ padding:14px 16px; border-bottom:1px solid var(--paper-line); }
+  .sb-section h3{
+    margin:0 0 9px; font-family:var(--font-display); font-size:0.78rem;
+    letter-spacing:0.09em; text-transform:uppercase; color: var(--teal-dp);
+  }
+  #searchInput{
+    width:100%; padding:8px 10px; border:1px solid var(--paper-line);
+    border-radius: var(--r-sm); background: var(--white); font-size:0.92rem;
+    font-family: var(--font-body);
+  }
+  .chip-row{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .catchip{
+    display:flex; align-items:center; gap:5px;
+    border:1px solid var(--paper-line); background: var(--white);
+    padding:4px 8px 4px 6px; border-radius: 20px; cursor:pointer;
+    font-size:0.72rem; font-family:var(--font-ui); font-weight:500;
+    color: var(--ink-soft); user-select:none;
+  }
+  .catchip .dot{ width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
+  .catchip.off{ opacity:0.38; }
+  .sb-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px; }
+  .sb-row label{ font-size:0.85rem; color:var(--ink-soft); }
+  .switch{ position:relative; width:38px; height:20px; flex:0 0 auto; }
+  .switch input{ opacity:0; width:0; height:0; }
+  .slider{ position:absolute; inset:0; background:#c9bd9e; border-radius:20px; cursor:pointer; transition:.15s; }
+  .slider:before{ content:""; position:absolute; height:14px; width:14px; left:3px; top:3px; background:white; border-radius:50%; transition:.15s; }
+  input:checked + .slider{ background: var(--teal); }
+  input:checked + .slider:before{ transform: translateX(18px); }
+  #legend{ font-size:0.78rem; color:var(--ink-soft); line-height:1.7; }
+  #legend .lg-item{ display:flex; align-items:center; gap:7px; margin-bottom:3px;}
+  #legend .lg-swatch{ width:11px; height:11px; border-radius:50%; flex:0 0 auto; }
+  .conf-key{ display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; font-size:0.7rem; }
+  .conf-key span{ display:flex; align-items:center; gap:4px; }
+  .conf-dash{ width:16px; height:0; border-top:2px solid var(--ink-soft); display:inline-block; }
+  .conf-dash.strong{ border-top-style:dashed; }
+  .conf-dash.spec{ border-top-style:dotted; }
+
+  #theoryBox{
+    display:none; margin-top:10px; background: rgba(166,58,50,0.08);
+    border:1px solid rgba(166,58,50,0.35); border-radius: var(--r-sm);
+    padding:9px 10px; font-size:0.79rem; color: var(--ink-soft); line-height:1.5;
+  }
+  #theoryBox.show{ display:block; }
+  #theoryBox b{ color: var(--rust); }
+
+  #eventList{ max-height: 230px; overflow-y:auto; }
+  .ev-mini{
+    padding:7px 8px; border-radius: var(--r-sm); cursor:pointer;
+    font-size:0.78rem; line-height:1.35; margin-bottom:3px; color:var(--ink-soft);
+    border:1px solid transparent;
+  }
+  .ev-mini:hover{ background: rgba(60,110,113,0.1); }
+  .ev-mini.active{ background: rgba(176,141,87,0.22); border-color: var(--brass); color:var(--ink); }
+  .ev-mini .ev-mini-date{ font-family:var(--font-ui); font-weight:600; font-size:0.68rem; color:var(--teal-dp); display:block; }
+
+  /* ---------------- MAP AREA ---------------- */
+  #mapWrap{ position:relative; min-width:0; }
+  #map{ position:absolute; inset:0; background:#9fc7ce; }
+  .leaflet-tile-pane.antique-filter{ filter: sepia(0.55) saturate(1.55) hue-rotate(-8deg) brightness(0.93) contrast(1.08); }
+  .leaflet-tile-pane.night-filter{ filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.95) saturate(0.7); }
+
+  /* decorative frame + compass overlay */
+  #mapDecor{ position:absolute; inset:0; pointer-events:none; z-index:399; }
+  #mapDecor .frame{
+    position:absolute; inset:8px; border: 2px solid rgba(176,141,87,0.55);
+    border-radius:2px;
+  }
+  #compassRose{ position:absolute; bottom:18px; right:18px; width:88px; height:88px; opacity:0.88; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.35)); }
+
+  .leaflet-popup-content-wrapper{
+    background: var(--white); border-radius: var(--r-md); box-shadow: var(--shadow-2);
+    border: 1px solid var(--paper-line);
+  }
+  .leaflet-popup-tip{ background: var(--white); }
+  .pop{ font-family: var(--font-body); max-width:270px; }
+  .pop .pop-eyebrow{ font-family:var(--font-ui); font-size:0.64rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--teal-dp); font-weight:700; }
+  .pop h4{ margin:3px 0 2px; font-family:var(--font-display); font-size:1.04rem; color:var(--navy); }
+  .pop .pop-dates{ font-family:var(--font-ui); font-size:0.72rem; color:var(--ink-soft); margin-bottom:6px; }
+  .pop p{ margin:0 0 7px; font-size:0.93rem; line-height:1.45; color:var(--ink); }
+  .pop blockquote{ font-family:var(--font-quote); font-style:italic; font-size:1rem; margin:6px 0; padding-left:9px; border-left:3px solid var(--brass); color:var(--ink-soft); }
+  .badge{ display:inline-block; font-family:var(--font-ui); font-size:0.62rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; padding:2px 7px; border-radius:20px; }
+  .badge.explicit{ background:#264d3b; color:#c9f0da; }
+  .badge.strong{ background:#5c4a1e; color:#f0dfa8; }
+  .badge.speculative{ background:#5a2620; color:#f0c7bf; }
+  .pop .related{ margin-top:6px; display:flex; flex-wrap:wrap; gap:5px; }
+  .pop .related a{ font-family:var(--font-ui); font-size:0.68rem; color:var(--teal-dp); background:rgba(60,110,113,0.12); padding:3px 7px; border-radius:20px; text-decoration:none; cursor:pointer; }
+  .pop .related a:hover{ background:rgba(60,110,113,0.24); }
+
+  /* custom divicon marker */
+  .cmark{ border-radius:50%; border:2px solid var(--white); box-shadow:0 1px 4px rgba(0,0,0,0.5); }
+  .cmark.pulse{ animation: pulse 1.6s ease-out infinite; }
+  @keyframes pulse{ 0%{ box-shadow:0 0 0 0 rgba(166,58,50,0.55);} 100%{ box-shadow:0 0 0 14px rgba(166,58,50,0);} }
+  .ship-icon{ font-size:20px; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6)); transform-origin:center; }
+
+  /* ---------------- TIMELINE ---------------- */
+  #timeline{
+    background: linear-gradient(180deg, var(--navy) 0%, var(--navy-deep) 100%);
+    border-top: 1px solid rgba(176,141,87,0.45);
+    padding: 9px 18px 12px;
+    color: var(--parchment);
+    z-index:450;
+  }
+  #tlTop{ display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+  #playBtn{
+    width:34px; height:34px; border-radius:50%; border:1px solid var(--brass);
+    background: var(--brass); color: var(--navy-deep); cursor:pointer; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center; font-size:14px;
+  }
+  #playBtn:hover{ filter:brightness(1.08); }
+  #tlDateBox{ flex:0 0 auto; min-width:230px; }
+  #tlNarrative{ font-family:var(--font-display); font-size:0.86rem; color:var(--brass-lt); letter-spacing:0.02em; }
+  #tlCalendar{ font-family:var(--font-ui); font-size:0.7rem; color: rgba(237,227,207,0.65); }
+  #tlSlider{ flex:1 1 auto; -webkit-appearance:none; appearance:none; height:5px; background:rgba(237,227,207,0.22); border-radius:3px; outline:none; }
+  #tlSlider::-webkit-slider-thumb{ -webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--brass-lt); border:2px solid var(--navy-deep); cursor:pointer; margin-top:-5px; }
+  #tlSlider::-moz-range-thumb{ width:15px; height:15px; border-radius:50%; background:var(--brass-lt); border:2px solid var(--navy-deep); cursor:pointer; }
+  #tlBtns{ display:flex; gap:6px; flex:0 0 auto; }
+  #tlTicks{ position:relative; height:16px; margin-left:58px; margin-right:0; }
+  .tick{ position:absolute; top:0; width:2px; height:7px; background:rgba(237,227,207,0.35); border-radius:1px; transform:translateX(-1px); }
+  .tick.tick-island{ background: var(--rust); height:10px; }
+
+  /* ---------------- ISLAND VIEW MODAL ---------------- */
+  #islandModal{
+    position:fixed; inset:0; background:rgba(13,22,38,0.72);
+    display:none; align-items:center; justify-content:center; z-index:900; padding:24px;
+  }
+  #islandModal.show{ display:flex; }
+  #islandPanel{
+    background: var(--parchment); border-radius:10px; max-width:1100px; width:100%;
+    max-height:92vh; overflow:hidden; box-shadow: var(--shadow-2);
+    display:grid; grid-template-rows:auto 1fr; border: 2px solid var(--brass);
+  }
+  #islandHead{ display:flex; align-items:center; justify-content:space-between; padding:12px 18px; background:var(--navy); color:var(--brass-lt); }
+  #islandHead h2{ margin:0; font-family:var(--font-display); font-size:1.15rem; letter-spacing:0.03em; }
+  #islandClose{ background:none; border:1px solid var(--brass); color:var(--brass-lt); width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:15px; }
+  #islandBody{ display:grid; grid-template-columns: 1.4fr 1fr; min-height:0; overflow:hidden; }
+  #islandSvgWrap{ background:#cfe0d8; overflow:auto; display:flex; align-items:center; justify-content:center; padding:10px; }
+  #islandSvgWrap svg{ width:100%; height:auto; max-height:74vh; }
+  #islandInfo{ padding:16px 18px; overflow-y:auto; border-left:1px solid var(--paper-line); }
+  #islandInfo h3{ font-family:var(--font-display); margin:0 0 4px; color:var(--navy); font-size:1.05rem; }
+  #islandInfo .pop-dates{ font-family:var(--font-ui); font-size:0.75rem; color:var(--ink-soft); margin-bottom:8px; }
+  #islandInfo p{ font-size:0.94rem; line-height:1.5; }
+  .ipt{ cursor:pointer; }
+  .ipt circle{ transition: r .12s; }
+  .ipt:hover circle, .ipt.active circle{ r:10; }
+  .ipt.active circle{ stroke: var(--rust); stroke-width:2.5; }
+  .ipt text{ font-family:var(--font-ui); font-size:11px; fill:var(--ink); pointer-events:none; }
+  #islandEventStrip{ display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+  #islandEventStrip button{
+    font-family:var(--font-ui); font-size:0.72rem; border:1px solid var(--paper-line);
+    background:var(--white); padding:5px 9px; border-radius:20px; cursor:pointer; color:var(--ink-soft);
+  }
+  #islandEventStrip button.active{ background:var(--brass); color:var(--navy-deep); border-color:var(--brass); font-weight:600; }
+
+  /* ---------------- THEME: MODERN (light, clean, minimal antique flourish) ---------------- */
+  body.theme-modern header#top{ background: linear-gradient(180deg,#132039,#0e1729); }
+  body.theme-modern #sidebar{ background:#F7F5EF; }
+  body.theme-modern #compassRose{ opacity:0.5; }
+  body.theme-modern #mapDecor .frame{ border-color: rgba(60,110,113,0.35); }
+
+  /* ---------------- THEME: NIGHT ---------------- */
+  body.theme-night #sidebar{ background:#1a2438; color:#e8e2cf; }
+  body.theme-night .sb-section{ border-color: rgba(237,227,207,0.1); }
+  body.theme-night .sb-section h3{ color: var(--brass-lt); }
+  body.theme-night #searchInput{ background:#0f1830; color:#e8e2cf; border-color: rgba(237,227,207,0.2); }
+  body.theme-night .catchip{ background:#0f1830; border-color:rgba(237,227,207,0.18); color:#dcd4bd; }
+  body.theme-night .ev-mini{ color:#c9c0a3; }
+  body.theme-night #legend{ color:#c9c0a3; }
+  body.theme-night .sb-row label{ color:#c9c0a3; }
+
+  /* scrollbars */
+  ::-webkit-scrollbar{ width:9px; height:9px; }
+  ::-webkit-scrollbar-thumb{ background: rgba(176,141,87,0.5); border-radius:5px; }
+  ::-webkit-scrollbar-track{ background: transparent; }
+
+  @media (max-width: 760px){
+    header#top h1{ font-size:1.05rem; }
+    header#top .subtitle{ display:none; }
+    #sidebar{ position:absolute; top:0; bottom:0; left:0; height:100%; }
+    #tlDateBox{ min-width:150px; }
+    #islandBody{ grid-template-columns:1fr; grid-template-rows:1fr auto; }
+  }
+</style>
+</head>
+<body class="theme-parchment">
+<div id="app">
+
+  <header id="top">
+    <svg class="crest" viewBox="0 0 100 100" fill="none">
+      <circle cx="50" cy="50" r="46" stroke="#D9C08C" stroke-width="2.5"/>
+      <path d="M50 8 L56 44 L92 50 L56 56 L50 92 L44 56 L8 50 L44 44 Z" fill="#D9C08C" opacity="0.9"/>
+      <circle cx="50" cy="50" r="7" fill="#16233B" stroke="#D9C08C" stroke-width="2"/>
+    </svg>
+    <div class="titles">
+      <h1>The Atlas of Robinson Crusoe</h1>
+      <div class="subtitle">Every voyage, coast, and camp of Defoe's 1719 castaway — mapped, dated, and sourced against the text</div>
+    </div>
+    <div class="headctrls">
+      <button class="modebtn" id="themeParchment" data-theme="theme-parchment">Parchment</button>
+      <button class="modebtn" id="themeModern" data-theme="theme-modern">Modern</button>
+      <button class="modebtn" id="themeNight" data-theme="theme-night">Night</button>
+      <button class="modebtn" id="islandBtn">⛰ Explore the Island</button>
+    </div>
+  </header>
+
+  <div id="main">
+    <aside id="sidebar">
+      <button id="sidebarToggle" title="Toggle sidebar">◂</button>
+
+      <div class="sb-section">
+        <h3>Search</h3>
+        <input id="searchInput" type="text" placeholder="Search places, people, events…">
+      </div>
+
+      <div class="sb-section">
+        <h3>Filter by category</h3>
+        <div class="chip-row" id="catChips"></div>
+      </div>
+
+      <div class="sb-section">
+        <h3>Map style</h3>
+        <div class="sb-row"><label>Basemap</label>
+          <select id="baseStyleSelect">
+            <option value="antique">Antique chart tone</option>
+            <option value="modern">Clean modern</option>
+          </select>
+        </div>
+        <div class="sb-row"><label>Show route line</label>
+          <label class="switch"><input type="checkbox" id="toggleRoute" checked><span class="slider"></span></label>
+        </div>
+        <div class="sb-row"><label>Fade earlier route</label>
+          <label class="switch"><input type="checkbox" id="toggleFade" checked><span class="slider"></span></label>
+        </div>
+        <div class="sb-row"><label>Show mentioned-only places</label>
+          <label class="switch"><input type="checkbox" id="toggleMentioned" checked><span class="slider"></span></label>
+        </div>
+        <div class="sb-row"><label>"Real-world island" theories</label>
+          <label class="switch"><input type="checkbox" id="toggleTheories"><span class="slider"></span></label>
+        </div>
+        <div id="theoryBox"></div>
+      </div>
+
+      <div class="sb-section">
+        <h3>Legend</h3>
+        <div id="legend"></div>
+        <div class="conf-key">
+          <span><i class="conf-dash"></i> Explicit in text</span>
+          <span><i class="conf-dash strong"></i> Strong inference</span>
+          <span><i class="conf-dash spec"></i> Speculative</span>
+        </div>
+      </div>
+
+      <div class="sb-section" style="border-bottom:none;">
+        <h3>Jump to event <span style="float:right; font-weight:400; text-transform:none; letter-spacing:0;">(<span id="evCount"></span>)</span></h3>
+        <div id="eventList"></div>
+      </div>
+    </aside>
+
+    <div id="mapWrap">
+      <div id="map"></div>
+      <div id="mapDecor">
+        <div class="frame"></div>
+        <svg id="compassRose" viewBox="0 0 100 100">
+          <g fill="none" stroke="#B08D57" stroke-width="1.4">
+            <circle cx="50" cy="50" r="44"/>
+            <circle cx="50" cy="50" r="34"/>
+          </g>
+          <g fill="#B08D57">
+            <path d="M50 6 L57 46 L50 50 L43 46 Z"/>
+            <path d="M50 94 L57 54 L50 50 L43 54 Z" opacity="0.55"/>
+            <path d="M6 50 L46 43 L50 50 L46 57 Z" opacity="0.55"/>
+            <path d="M94 50 L54 43 L50 50 L54 57 Z" opacity="0.55"/>
+          </g>
+          <text x="50" y="16" text-anchor="middle" font-size="9" fill="#B08D57" font-family="Cinzel">N</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div id="timeline">
+    <div id="tlTop">
+      <button id="playBtn">▶</button>
+      <div id="tlDateBox">
+        <div id="tlNarrative">—</div>
+        <div id="tlCalendar">—</div>
+      </div>
+      <input type="range" id="tlSlider" min="0" max="1" value="0" step="1">
+      <div id="tlBtns">
+        <button class="modebtn" id="btnRoute">Show Entire Route</button>
+        <button class="modebtn" id="btnFollow">Follow Crusoe</button>
+        <button class="modebtn" id="btnReset">Reset View</button>
+      </div>
+    </div>
+    <div id="tlTicks"></div>
+  </div>
+
+</div>
+
+<div id="islandModal">
+  <div id="islandPanel">
+    <div id="islandHead">
+      <h2>The Island — An Interpretive Reconstruction</h2>
+      <button id="islandClose">✕</button>
+    </div>
+    <div id="islandBody">
+      <div id="islandSvgWrap"></div>
+      <div id="islandInfo">
+        <p style="font-size:0.82rem; color:var(--ink-soft); font-style:italic;">Positions below are reconstructed from Crusoe's own descriptions of direction and distance in the text — not a surveyed map. Treat relative placement as interpretive.</p>
+        <div id="islandDetail"></div>
+        <div id="islandEventStrip"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-BB3hKbKWOc9Ez/TAwyWxNXeoV9c1v6FIeYiBieIWkpLjauysF18NzgR1MBNBXf8/KABdlkX68nAhlwcDFLGPCQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+/* =====================================================================
+   THE ATLAS OF ROBINSON CRUSOE
+   Every place/date below is grounded in Defoe's 1719 text (and, where
+   the text itself is vague, flagged as "strong" inference or
+   "speculative" rather than invented). See confidence badges in-app.
+   ===================================================================== */
+
+const CATS = {
+  origins:    { label:"Origins & Family",     color:"#B08D57" },
+  voyage:     { label:"Voyages",              color:"#3C6E71" },
+  captivity:  { label:"Captivity in Sallee",  color:"#A63A32" },
+  brazil:     { label:"Brazil",               color:"#6B7A3A" },
+  wreck:      { label:"Storms & Wrecks",      color:"#7A2E27" },
+  settlement: { label:"Building the Island",  color:"#244B4D" },
+  discovery:  { label:"Discovery & Fear",     color:"#C79A3B" },
+  encounter:  { label:"Friday & Others",      color:"#6B3E5E" },
+  return:     { label:"The Long Way Home",    color:"#223357" },
+  coda:       { label:"After the Island",     color:"#6E5B46" }
+};
+
+/* order: position in the master chronological timeline (0..35).
+   Entries with order:null are "mentioned, not visited" places —
+   shown on the map but not part of the scrubbable sequence.
+   scope: "world" (rendered on the Leaflet map) or "island"
+   (rendered inside the Island View; still part of the timeline). */
+const LOCATIONS = [
+{ id:"york-birth", order:0, scope:"world", category:"origins",
+  title:"York — Birth & Family", narrativeDate:"Before the story begins", calendarDate:"1632",
+  lat:53.958, lng:-1.080, confidence:"explicit", visited:true,
+  summary:"Robinson Kreutznaer is born in York, son of a Bremen-born merchant who had first settled in Hull. The family anglicizes the name to Crusoe.",
+  quote:"I was born in the year 1632, in the city of York",
+  related:["hull-departure"] },
+
+{ id:"hull-departure", order:1, scope:"world", category:"origins",
+  title:"Hull — Against His Father's Wishes", narrativeDate:"Age 18", calendarDate:"1 September 1651",
+  lat:53.744, lng:-0.336, confidence:"explicit", visited:true,
+  summary:"Ignoring his father's advice to settle into the safe \u2018middle station\u2019 of life, eighteen-year-old Crusoe boards a ship at Hull bound for London — the first step of a lifelong restlessness.",
+  related:["york-birth","yarmouth-storm"] },
+
+{ id:"yarmouth-storm", order:2, scope:"world", category:"voyage",
+  title:"Yarmouth Roads — The First Storm", narrativeDate:"Days into his first voyage", calendarDate:"September 1651",
+  lat:52.61, lng:1.79, confidence:"explicit", visited:true,
+  summary:"A violent gale off Yarmouth nearly sinks the ship. Terrified, Crusoe swears to go home and never go to sea again — a vow he forgets as soon as the wind drops.",
+  related:["hull-departure","london-guinea1"] },
+
+{ id:"london-guinea1", order:3, scope:"world", category:"voyage",
+  title:"London — A Captain's Tutelage", narrativeDate:"Shortly after", calendarDate:"c. 1651\u201352",
+  lat:51.507, lng:-0.128, confidence:"strong", visited:true,
+  summary:"In London, Crusoe falls in with a ship's captain who teaches him navigation and takes him along on a trading voyage to the coast of Guinea — his first taste of profit at sea.",
+  related:["guinea-coast1"] },
+
+{ id:"guinea-coast1", order:4, scope:"world", category:"voyage",
+  title:"The Guinea Coast — First Profit", narrativeDate:"First African voyage", calendarDate:"c. 1652",
+  lat:5.55, lng:-0.5, confidence:"strong", visited:true,
+  summary:"Trading trinkets for gold dust, Crusoe returns to England roughly \u00a3300 richer — proof, he believes, that trade is his calling. The captain who taught him dies soon after.",
+  related:["london-guinea1","sallee-capture"] },
+
+{ id:"sallee-capture", order:5, scope:"world", category:"captivity",
+  title:"Off the Canaries — Taken by Corsairs", narrativeDate:"Second Guinea voyage", calendarDate:"c. 1653",
+  lat:28.3, lng:-16.0, confidence:"strong", visited:true,
+  summary:"Sailing for Guinea a second time, Crusoe's ship is overtaken by a Sallee corsair. He is carried off not toward the profits he imagined, but into slavery on the coast of Morocco.",
+  related:["guinea-coast1","sallee-slavery"] },
+
+{ id:"sallee-slavery", order:6, scope:"world", category:"captivity",
+  title:"Sal\u00e9, Morocco — Two Years a Slave", narrativeDate:"~2 years", calendarDate:"c. 1653\u20131655",
+  lat:34.039, lng:-6.816, confidence:"explicit", visited:true,
+  summary:"Held by the corsair captain, Crusoe is kept largely for fishing errands — the very duty that eventually gives him his chance to escape.",
+  quote:"in the city of Sallee, a Moorish town",
+  related:["sallee-capture","xury-escape"] },
+
+{ id:"xury-escape", order:7, scope:"world", category:"captivity",
+  title:"The African Coast — Escape with Xury", narrativeDate:"The escape", calendarDate:"c. 1655",
+  lat:15.0, lng:-16.7, confidence:"strong", visited:true,
+  summary:"Sent out fishing, Crusoe seizes the boat and, with the enslaved boy Xury, sails south along the coast — surviving a lion, a leopard, and wary encounters with local peoples along the way.",
+  related:["sallee-slavery","portuguese-rescue"] },
+
+{ id:"portuguese-rescue", order:8, scope:"world", category:"captivity",
+  title:"Off Cape Verde — Rescued at Sea", narrativeDate:"Making for the Cape Verde Islands", calendarDate:"c. 1655",
+  lat:15.7, lng:-24.0, confidence:"strong", visited:true,
+  summary:"A Portuguese trading ship takes them aboard. The captain buys Crusoe's boat, and — for a price, with a promise of freedom in ten years — buys Xury too. Crusoe later admits some guilt at how easily he let the boy go.",
+  related:["xury-escape","brazil-plantation"] },
+
+{ id:"brazil-plantation", order:9, scope:"world", category:"brazil",
+  title:"Bahia, Brazil — The Sugar Plantation", narrativeDate:"Four years as a planter", calendarDate:"c. 1655\u20131659",
+  lat:-12.97, lng:-38.5, confidence:"strong", visited:true,
+  summary:"With the Portuguese captain's help, Crusoe settles near S\u00e3o Salvador da Bahia, learns Portuguese, and builds a modest sugar and tobacco estate — precisely the \u2018middle station\u2019 prosperity his father once urged on him.",
+  related:["portuguese-rescue","guinea-departure2"] },
+
+{ id:"guinea-departure2", order:10, scope:"world", category:"voyage",
+  title:"Bahia — Departure on the Slaving Voyage", narrativeDate:"Persuaded by fellow planters", calendarDate:"1 September 1659",
+  lat:-12.97, lng:-38.5, confidence:"explicit", visited:true,
+  summary:"Restless again, Crusoe agrees to captain an illicit voyage to Guinea for enslaved labourers, sailing on 1 September — exactly eight years, he notes uneasily, since he first left Hull.",
+  related:["brazil-plantation","atlantic-storm"] },
+
+{ id:"atlantic-storm", order:11, scope:"world", category:"wreck",
+  title:"The Atlantic — Driven Off Course", narrativeDate:"Twelve days of storm", calendarDate:"September 1659",
+  lat:8.0, lng:-50.0, confidence:"explicit", visited:true,
+  summary:"A hurricane batters the ship far off its intended course toward the Caribbean. After twelve days of violence, the vessel strikes a sandbar and begins to break apart.",
+  related:["guinea-departure2","shipwreck"] },
+
+{ id:"shipwreck", order:12, scope:"world", category:"wreck",
+  title:"Near the Mouth of the Orinoco — The Wreck", narrativeDate:"Day 1 of 10,226", calendarDate:"30 September 1659",
+  lat:11.25, lng:-60.67, confidence:"explicit", visited:true,
+  summary:"Crusoe alone survives, washing ashore on an uninhabited island roughly thirty miles off Trinidad, near the Orinoco's mouth. Every other man aboard drowns.",
+  quote:"I was the only person saved of all the ship's company",
+  related:["atlantic-storm","island-landing"] },
+
+{ id:"island-landing", order:13, scope:"island", category:"wreck", ix:120, iy:300,
+  title:"The Landing Beach", narrativeDate:"Day 1", calendarDate:"30 September 1659",
+  confidence:"explicit",
+  summary:"Exhausted and half-drowned, Crusoe drags himself onto a north-shore beach, the sole survivor, with nothing but a knife, a pipe, and a little tobacco.",
+  related:["shipwreck","island-salvage"] },
+
+{ id:"island-salvage", order:14, scope:"island", category:"wreck", ix:150, iy:265,
+  title:"Salvaging the Wreck", narrativeDate:"First weeks", calendarDate:"October 1659",
+  confidence:"explicit",
+  summary:"Over repeated raft trips to the grounded hulk, Crusoe hauls ashore tools, arms, food, carpenter's stores, and — crucially — seed corn and barley, before the wreck finally breaks apart.",
+  related:["island-landing","island-castle"] },
+
+{ id:"island-castle", order:15, scope:"island", category:"settlement", ix:300, iy:230,
+  title:"The \u201cCastle\u201d — First Dwelling", narrativeDate:"Weeks 3\u20138", calendarDate:"Oct\u2013Nov 1659",
+  confidence:"explicit",
+  summary:"Crusoe fortifies a hollow in a rock face with a palisade of stakes, creating a defensible cave-and-tent dwelling he calls his castle — his home for the next 28 years.",
+  related:["island-salvage","island-journal"] },
+
+{ id:"island-journal", order:16, scope:"island", category:"settlement", ix:335, iy:205,
+  title:"Journal & Calendar Post", narrativeDate:"Begins keeping time", calendarDate:"c. November 1659",
+  confidence:"explicit",
+  summary:"Fearing he will lose track of the days, Crusoe cuts a post into a large cross and notches it daily, alongside a written journal kept until his ink runs dry.",
+  related:["island-castle","island-illness"] },
+
+{ id:"island-illness", order:17, scope:"island", category:"discovery", ix:310, iy:255,
+  title:"Fever & Conversion", narrativeDate:"~9 months in", calendarDate:"June 1660",
+  confidence:"explicit",
+  summary:"A violent ague brings Crusoe to the edge of death and to a religious crisis. A feverish vision and a chance reading of scripture mark a genuine turn toward faith that reshapes the rest of his account.",
+  related:["island-journal","island-grain"] },
+
+{ id:"island-grain", order:18, scope:"island", category:"discovery", ix:275, iy:185,
+  title:"The Providence of the Barley", narrativeDate:"~Year 1", calendarDate:"1660",
+  confidence:"explicit",
+  summary:"Stalks of barley and rice sprout near his fort from a shaken-out, seemingly empty seed bag. Crusoe first takes it for a miracle before remembering the leftover grain — and starts planting deliberately.",
+  related:["island-illness","island-earthquake"] },
+
+{ id:"island-earthquake", order:19, scope:"island", category:"discovery", ix:345, iy:245,
+  title:"The Earthquake", narrativeDate:"~Year 1", calendarDate:"1660",
+  confidence:"explicit",
+  summary:"A sudden earthquake — followed by a hurricane — nearly brings the rock face down onto his dwelling, convincing Crusoe to build a safer retreat away from the cliff.",
+  related:["island-grain","island-bower"] },
+
+{ id:"island-bower", order:20, scope:"island", category:"settlement", ix:430, iy:340,
+  title:"The \u201cCountry House\u201d / Bower", narrativeDate:"Ongoing", calendarDate:"c. 1660s",
+  confidence:"explicit",
+  summary:"Inland, Crusoe builds and hedges a second retreat — his \u2018bower\u2019 or country house — visited on his circuits of the island and eventually ringed by a young orchard.",
+  related:["island-earthquake","island-goats"] },
+
+{ id:"island-goats", order:21, scope:"island", category:"settlement", ix:475, iy:250,
+  title:"Taming the Goats", narrativeDate:"Years 2\u20133 onward", calendarDate:"c. 1661\u201363",
+  confidence:"explicit",
+  summary:"After hunting wild goats for meat, Crusoe begins trapping kids and breeding them in enclosures, eventually keeping a domesticated herd for milk, cheese, and butter.",
+  related:["island-bower","island-canoe"] },
+
+{ id:"island-canoe", order:22, scope:"island", category:"settlement", ix:190, iy:400,
+  title:"The Abandoned Canoe", narrativeDate:"~Year 4", calendarDate:"c. 1663",
+  confidence:"strong",
+  summary:"Crusoe fells a great tree to hollow out a canoe large enough to reach the mainland — then discovers, too late, that he has no way to drag it the hundred-odd yards down to the water.",
+  related:["island-goats","island-boat2"] },
+
+{ id:"island-boat2", order:23, scope:"island", category:"settlement", ix:235, iy:435,
+  title:"A Smaller Boat, and a Dangerous Current", narrativeDate:"Later years", calendarDate:"c. mid-1660s",
+  confidence:"strong",
+  summary:"A second, smaller canoe built nearer the coast lets Crusoe circle part of the island by sea — until a powerful offshore current very nearly sweeps him away for good.",
+  related:["island-canoe","island-footprint"] },
+
+{ id:"island-footprint", order:24, scope:"island", category:"discovery", ix:530, iy:420,
+  title:"The Footprint", narrativeDate:"~Year 15\u201318", calendarDate:"c. mid-1670s",
+  confidence:"speculative",
+  summary:"On a distant shore he rarely visits, Crusoe finds a single human footprint in the sand and is thrown into years of terror and fortification. Defoe marks this by year-count rather than calendar date, so the exact year is genuinely uncertain.",
+  quote:"I stood like one thunderstruck",
+  related:["island-boat2","island-feast"] },
+
+{ id:"island-feast", order:25, scope:"island", category:"discovery", ix:565, iy:445,
+  title:"Remains of a Cannibal Feast", narrativeDate:"Shortly after the footprint", calendarDate:"c. mid-1670s",
+  confidence:"speculative",
+  summary:"Exploring the same far shore, Crusoe finds skulls, bones, and the ashes of a fire — grim evidence that parts of the island are visited by mainland raiders on ritual voyages.",
+  related:["island-footprint","island-wreck2"] },
+
+{ id:"island-wreck2", order:26, scope:"island", category:"discovery", ix:155, iy:465,
+  title:"The Spanish Wreck", narrativeDate:"~Year 26", calendarDate:"c. 1685",
+  confidence:"strong",
+  summary:"A ship wrecks in a storm within sight of the island. Crusoe rows out to find no survivors, only salvage — money he now regards as worthless, and goods that renew his hope of eventual rescue.",
+  related:["island-feast","friday-rescue"] },
+
+{ id:"friday-rescue", order:27, scope:"island", category:"encounter", ix:545, iy:400,
+  title:"Rescuing Friday", narrativeDate:"His 24th year on the island", calendarDate:"c. 1686",
+  confidence:"explicit",
+  summary:"Crusoe intervenes in a cannibal raid and saves a captive, naming him Friday for the day of the rescue. Friday quickly becomes companion, student, and — in Crusoe's own account — devoted friend.",
+  quote:"my man Friday",
+  related:["island-wreck2","friday-father"] },
+
+{ id:"friday-father", order:28, scope:"island", category:"encounter", ix:565, iy:412,
+  title:"Friday's Father, and a Spaniard", narrativeDate:"Shortly after", calendarDate:"c. 1686",
+  confidence:"explicit",
+  summary:"In a second raid, Crusoe and Friday free two more prisoners: Friday's own father, and a shipwrecked Spaniard, who tells of other Spaniards stranded on the mainland.",
+  related:["friday-rescue","mutiny-arrival"] },
+
+{ id:"mutiny-arrival", order:29, scope:"island", category:"encounter", ix:135, iy:315,
+  title:"The English Ship — Mutiny", narrativeDate:"His 28th year", calendarDate:"December 1686",
+  confidence:"explicit",
+  summary:"An English ship anchors offshore; its crew has mutinied and marooned their own captain. Crusoe strikes a bargain with the captain to help retake the vessel.",
+  related:["friday-father","island-departure"] },
+
+{ id:"island-departure", order:30, scope:"island", category:"return", ix:120, iy:300,
+  title:"Leaving the Island", narrativeDate:"28 years, 2 months, 19 days", calendarDate:"19 December 1686",
+  confidence:"explicit",
+  summary:"With the mutineers left behind at their own request, Crusoe boards the recovered ship and sails for home, taking his goatskin cap, parrot, umbrella, and long-useless money as relics.",
+  quote:"eight and twenty years, two months, and nineteen days",
+  related:["mutiny-arrival","england-return"] },
+
+{ id:"england-return", order:31, scope:"world", category:"return",
+  title:"England — Home After 35 Years", narrativeDate:"\u2014", calendarDate:"11 June 1687",
+  lat:50.9, lng:-1.4, confidence:"explicit", visited:true,
+  summary:"Crusoe reaches England to find his parents long dead and, having been given up for lost, no inheritance left him. He resolves to travel to Lisbon to learn the fate of his Brazilian estate.",
+  related:["island-departure","lisbon-estate"] },
+
+{ id:"lisbon-estate", order:32, scope:"world", category:"return",
+  title:"Lisbon — Reclaiming a Fortune", narrativeDate:"\u2014", calendarDate:"c. 1688\u201389",
+  lat:38.72, lng:-9.14, confidence:"explicit", visited:true,
+  summary:"In Lisbon, Crusoe learns his Brazilian plantation has been held in trust and has grown substantially in his absence — he sets off for home a wealthy man, with a fortune now that he has to move overland.",
+  related:["england-return","pyrenees"] },
+
+{ id:"pyrenees", order:33, scope:"world", category:"return",
+  title:"The Pyrenees — Wolves in the Snow", narrativeDate:"\u2014", calendarDate:"Winter 1689, via Pamplona",
+  lat:42.8, lng:-1.6, confidence:"explicit", visited:true,
+  summary:"Wary of a winter sea voyage, Crusoe travels overland from Lisbon through Spain, waiting out heavy snow at Pamplona before crossing the Pyrenees into France — where his party survives a night attack by a pack of wolves and a bear.",
+  quote:"we stayed no less than twenty days at Pampeluna",
+  related:["lisbon-estate","france-england"] },
+
+{ id:"france-england", order:34, scope:"world", category:"return",
+  title:"France — The Final Leg Home", narrativeDate:"\u2014", calendarDate:"1689",
+  lat:45.0, lng:2.5, confidence:"strong", visited:true,
+  summary:"Clear of the mountains, Crusoe's party travels on through France to the coast and crosses to England — this time for good.",
+  related:["pyrenees","coda"] },
+
+{ id:"coda", order:35, scope:"world", category:"coda",
+  title:"Coda — Marriage, and a Return to the Sea", narrativeDate:"\u2014", calendarDate:"1690s onward",
+  lat:51.5, lng:-0.5, confidence:"strong", visited:true,
+  summary:"Crusoe marries, has three children, and settles for a time — until, widowed, restlessness pulls him back to sea, on a voyage that revisits his old island. Those further travels are told in Defoe's own sequel, The Farther Adventures of Robinson Crusoe (1719).",
+  related:["france-england"] },
+
+/* --- Mentioned, but never actually visited in the novel --- */
+{ id:"trinidad-mainland", order:null, scope:"world", category:"encounter",
+  title:"Trinidad & the Mainland — Friday's Homeland", narrativeDate:"Mentioned only", calendarDate:"\u2014",
+  lat:10.65, lng:-61.35, confidence:"strong", visited:false,
+  summary:"Friday tells Crusoe his people live on the coast visible from the island's hills — the general region of Trinidad and the South American mainland the book's own subtitle places nearby. Crusoe never sets foot there in the original 1719 novel.",
+  related:["friday-rescue"] },
+
+{ id:"barbados-intended", order:null, scope:"world", category:"voyage",
+  title:"Barbados — The Intended Destination", narrativeDate:"Mentioned only", calendarDate:"\u2014",
+  lat:13.19, lng:-59.54, confidence:"explicit", visited:false,
+  summary:"The 1659 voyage was bound for Barbados before the hurricane drove it far off course — the island Crusoe was supposed to reach, and never does.",
+  related:["atlantic-storm"] }
+];
+
+const THEORIES = [
+{ id:"tobago", lat:11.25, lng:-60.67, label:"Tobago — Best Textual Fit", confidence:"strong",
+  note:"The book's subtitle places the island near the mouth of the Orinoco, about thirty miles off Trinidad. Tobago sits almost exactly there, which is why many readers and early illustrators treated it as \u2018Crusoe's island\u2019 — though Defoe never names it outright." },
+{ id:"juanfernandez", lat:-33.64, lng:-78.84, label:"M\u00e1s a Tierra, Chile — The Real Castaway's Island", confidence:"explicit",
+  note:"This is where Scottish sailor Alexander Selkirk actually spent four years marooned (1704\u20131709), and is Defoe's acknowledged real-world inspiration for the survival story. It sits in the Pacific, about 400 miles off Chile — nowhere near the Caribbean setting the novel describes. The inspiration and the setting are two different islands." }
+];
+
+/* ===================================================================== */
+
+const byId = {}; LOCATIONS.forEach(l => byId[l.id] = l);
+const timelineEvents = LOCATIONS.filter(l => l.order !== null).sort((a,b) => a.order - b.order);
+const mentionedOnly = LOCATIONS.filter(l => l.order === null);
+const islandOnly = LOCATIONS.filter(l => l.scope === 'island');
+const CONF_LABEL = { explicit:'Explicit', strong:'Strong inference', speculative:'Speculative' };
+const CONF_BADGE = { explicit:'explicit', strong:'strong', speculative:'speculative' };
+
+const state = {
+  activeIndex: 0,
+  activeCats: new Set(Object.keys(CATS)),
+  showMentioned: true,
+  showRoute: true,
+  fadeEarlier: true,
+  showTheories: false,
+  showFullRoute: false,
+  following: false,
+  playing: false,
+  playTimer: null,
+  search: '',
+  lastIslandIndex: 13
+};
+
+/* ---------------- MAP ---------------- */
+const ATTRIB = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+const TILE_URLS = {
+  antique: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  modern:  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+};
+const map = L.map('map', { zoomControl:false, worldCopyJump:true, minZoom:2 }).setView([18, -35], 3);
+L.control.zoom({ position:'bottomleft' }).addTo(map);
+L.control.attribution({ position:'bottomright', prefix:false }).addTo(map);
+
+let currentTileLayer = null;
+function setBaseTiles(style){
+  if (currentTileLayer) map.removeLayer(currentTileLayer);
+  currentTileLayer = L.tileLayer(TILE_URLS[style], { subdomains:'abcd', maxZoom:19, attribution:ATTRIB }).addTo(map);
+  const pane = map.getPane('tilePane');
+  pane.classList.remove('antique-filter');
+  if (style === 'antique') pane.classList.add('antique-filter');
+  if (document.body.classList.contains('theme-night')) pane.classList.add('night-filter'); else pane.classList.remove('night-filter');
+  document.getElementById('baseStyleSelect').value = style;
+}
+
+const markersLayer = L.layerGroup().addTo(map);
+const routeLayer = L.layerGroup().addTo(map);
+const theoryLayer = L.layerGroup();
+let islandGateMarker = null;
+let shipMarker = null;
+
+/* ---------------- ROUTE GEOMETRY ---------------- */
+function positionFor(ev){
+  if (ev.scope === 'world') return [ev.lat, ev.lng];
+  return [byId['shipwreck'].lat, byId['shipwreck'].lng];
+}
+function computeRoute(){
+  const uniq = []; const segIndexAtOrder = []; let last = null;
+  timelineEvents.forEach(ev => {
+    const p = positionFor(ev);
+    if (!last || last[0] !== p[0] || last[1] !== p[1]) { uniq.push(p); last = p; }
+    segIndexAtOrder.push(uniq.length - 1);
+  });
+  return { uniq, segIndexAtOrder };
+}
+const ROUTE = computeRoute();
+
+function redrawRoute(){
+  routeLayer.clearLayers();
+  const upto = ROUTE.segIndexAtOrder[state.activeIndex];
+  const pts = ROUTE.uniq.slice(0, upto + 1);
+
+  if (state.showFullRoute){
+    L.polyline(ROUTE.uniq, { color:'#B08D57', weight:1.5, opacity:0.35, dashArray:'2 6' }).addTo(routeLayer);
+  }
+  if (state.showRoute && pts.length > 1){
+    if (state.fadeEarlier){
+      for (let i = 0; i < pts.length - 1; i++){
+        const age = (pts.length - 1) - i;
+        const opacity = Math.max(0.14, 1 - age * 0.13);
+        L.polyline([pts[i], pts[i+1]], { color:'#A63A32', weight:3, opacity, dashArray:'1 7', lineCap:'round' }).addTo(routeLayer);
+      }
+    } else {
+      L.polyline(pts, { color:'#A63A32', weight:3, opacity:0.85, dashArray:'1 7', lineCap:'round' }).addTo(routeLayer);
+    }
+  }
+  const shipPos = pts.length ? pts[pts.length - 1] : ROUTE.uniq[0];
+  const shipIcon = L.divIcon({ className:'', html:'<div class="ship-icon">\u26F5</div>', iconSize:[22,22], iconAnchor:[11,11] });
+  shipMarker = L.marker(shipPos, { icon:shipIcon, zIndexOffset:1000, interactive:false }).addTo(routeLayer);
+
+  if (state.following) map.panTo(shipPos, { animate:true, duration:0.6 });
+}
+
+/* ---------------- POPUPS ---------------- */
+function confBadgeHTML(conf){
+  return `<span class="badge ${CONF_BADGE[conf]}">${CONF_LABEL[conf]}</span>`;
+}
+function buildPopupHTML(ev){
+  const cat = CATS[ev.category];
+  let html = `<div class="pop"><div class="pop-eyebrow">${cat.label}${ev.visited === false ? ' \u00b7 Mentioned only' : ''}</div>`;
+  html += `<h4>${ev.title}</h4>`;
+  html += `<div class="pop-dates">${ev.narrativeDate} \u00b7 ${ev.calendarDate}<br>${confBadgeHTML(ev.confidence)}</div>`;
+  html += `<p>${ev.summary}</p>`;
+  if (ev.quote) html += `<blockquote>\u201c${ev.quote}\u201d</blockquote>`;
+  if (ev.related && ev.related.length){
+    html += '<div class="related">' + ev.related.map(rid => {
+      const r = byId[rid]; if (!r) return '';
+      return `<a onclick="jumpToEvent('${rid}')">${r.title.split(' \u2014 ')[0]}</a>`;
+    }).join('') + '</div>';
+  }
+  if (ev.scope === 'island'){
+    html += `<div class="related"><a onclick="openIslandModal('${ev.id}')">\u26f0 View on Island \u2192</a></div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+window.jumpToEvent = function(id){
+  const ev = byId[id];
+  if (!ev) return;
+  if (ev.order !== null) setActiveIndex(ev.order, true);
+  if (ev.scope === 'world'){
+    map.closePopup();
+    map.flyTo([ev.lat, ev.lng], Math.max(map.getZoom(), 4), { duration:0.8 });
+    setTimeout(() => { const m = markerById[id]; if (m) m.openPopup(); }, 850);
+  } else {
+    openIslandModal(id);
+  }
+};
+
+/* ---------------- WORLD MARKERS ---------------- */
+const markerById = {};
+function catActiveAndVisible(ev){
+  if (!state.activeCats.has(ev.category)) return false;
+  if (ev.visited === false && !state.showMentioned) return false;
+  if (state.search){
+    const s = state.search.toLowerCase();
+    if (!(ev.title.toLowerCase().includes(s) || ev.summary.toLowerCase().includes(s))) return false;
+  }
+  return true;
+}
+function renderMarkers(){
+  markersLayer.clearLayers();
+  Object.keys(markerById).forEach(k => delete markerById[k]);
+  LOCATIONS.filter(ev => ev.scope === 'world').forEach(ev => {
+    if (!catActiveAndVisible(ev)) return;
+    const color = CATS[ev.category].color;
+    const isMentioned = ev.visited === false;
+    const marker = L.circleMarker([ev.lat, ev.lng], {
+      radius: isMentioned ? 6 : 8,
+      color: '#FBF8F1',
+      weight: 2,
+      fillColor: color,
+      fillOpacity: isMentioned ? 0.35 : 0.92,
+      dashArray: isMentioned ? '2 3' : null,
+      className: 'cmark'
+    }).addTo(markersLayer);
+    marker.bindPopup(buildPopupHTML(ev), { maxWidth:290 });
+    marker.on('click', () => { if (ev.order !== null) setActiveIndex(ev.order, true); });
+    markerById[ev.id] = marker;
+  });
+
+  const wreck = byId['shipwreck'];
+  islandGateMarker = L.marker([wreck.lat + 0.55, wreck.lng + 0.55], {
+    icon: L.divIcon({ className:'', html:'<div style="font-size:22px; filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))">\ud83c\udfdd</div>', iconSize:[26,26], iconAnchor:[13,13] }),
+    zIndexOffset: 900
+  }).addTo(markersLayer);
+  islandGateMarker.bindTooltip('Explore the Island \u2192', { direction:'top' });
+  islandGateMarker.on('click', () => openIslandModal());
+
+  if (state.showTheories){
+    theoryLayer.addTo(map);
+    theoryLayer.clearLayers();
+    THEORIES.forEach(t => {
+      const m = L.marker([t.lat, t.lng], {
+        icon: L.divIcon({ className:'', html:'<div style="width:14px;height:14px;background:#EDE3CF;border:2.5px solid #A63A32;transform:rotate(45deg);box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>', iconSize:[14,14], iconAnchor:[7,7] })
+      }).addTo(theoryLayer);
+      m.bindPopup(`<div class="pop"><div class="pop-eyebrow">Real-world theory</div><h4>${t.label}</h4><div class="pop-dates">${confBadgeHTML(t.confidence)}</div><p>${t.note}</p></div>`, { maxWidth:290 });
+    });
+  } else {
+    map.removeLayer(theoryLayer);
+  }
+}
+
+/* ---------------- TIMELINE ---------------- */
+const tlSlider = document.getElementById('tlSlider');
+const tlNarrative = document.getElementById('tlNarrative');
+const tlCalendar = document.getElementById('tlCalendar');
+const tlTicks = document.getElementById('tlTicks');
+tlSlider.max = timelineEvents.length - 1;
+
+function renderTicks(){
+  tlTicks.innerHTML = '';
+  timelineEvents.forEach((ev, i) => {
+    const pct = (i / (timelineEvents.length - 1)) * 100;
+    const d = document.createElement('div');
+    d.className = 'tick' + (ev.scope === 'island' ? ' tick-island' : '');
+    d.style.left = pct + '%';
+    d.title = ev.title;
+    tlTicks.appendChild(d);
+  });
+}
+
+function setActiveIndex(i, userInitiated){
+  state.activeIndex = Math.max(0, Math.min(timelineEvents.length - 1, i));
+  const ev = timelineEvents[state.activeIndex];
+  tlSlider.value = state.activeIndex;
+  tlNarrative.textContent = ev.title;
+  tlCalendar.textContent = ev.narrativeDate + '  \u00b7  ' + ev.calendarDate;
+  if (ev.scope === 'island') state.lastIslandIndex = state.activeIndex;
+
+  redrawRoute();
+  updateEventListActive();
+  updateIslandActive();
+  highlightActiveMarker(ev);
+
+  if (userInitiated && ev.scope === 'world'){
+    map.flyTo([ev.lat, ev.lng], Math.max(map.getZoom(), 4), { duration:0.7 });
+  }
+}
+
+tlSlider.addEventListener('input', () => setActiveIndex(parseInt(tlSlider.value, 10), false));
+
+let prevActiveMarkerId = null;
+function highlightActiveMarker(ev){
+  if (prevActiveMarkerId && markerById[prevActiveMarkerId]){
+    const prevEv = byId[prevActiveMarkerId];
+    markerById[prevActiveMarkerId].setStyle({ weight:2, radius: prevEv.visited === false ? 6 : 8 });
+  }
+  if (ev.scope === 'world' && markerById[ev.id]){
+    markerById[ev.id].setStyle({ weight:4, radius: (ev.visited === false ? 6 : 8) + 2 });
+    markerById[ev.id].bringToFront();
+    prevActiveMarkerId = ev.id;
+  } else {
+    prevActiveMarkerId = null;
+  }
+}
+
+const playBtn = document.getElementById('playBtn');
+playBtn.addEventListener('click', () => {
+  state.playing = !state.playing;
+  playBtn.textContent = state.playing ? '\u23f8' : '\u25b6';
+  if (state.playing){
+    state.playTimer = setInterval(() => {
+      if (state.activeIndex >= timelineEvents.length - 1){
+        state.playing = false; playBtn.textContent = '\u25b6'; clearInterval(state.playTimer); return;
+      }
+      setActiveIndex(state.activeIndex + 1, true);
+    }, 1400);
+  } else {
+    clearInterval(state.playTimer);
+  }
+});
+
+document.getElementById('btnRoute').addEventListener('click', () => {
+  state.showFullRoute = !state.showFullRoute;
+  document.getElementById('btnRoute').classList.toggle('active', state.showFullRoute);
+  redrawRoute();
+});
+document.getElementById('btnFollow').addEventListener('click', () => {
+  state.following = !state.following;
+  document.getElementById('btnFollow').classList.toggle('active', state.following);
+  if (state.following) redrawRoute();
+});
+document.getElementById('btnReset').addEventListener('click', () => {
+  map.setView([18, -35], 3);
+});
+
+/* ---------------- SIDEBAR: chips, legend, list ---------------- */
+function renderChipsAndLegend(){
+  const chipRow = document.getElementById('catChips');
+  const legend = document.getElementById('legend');
+  chipRow.innerHTML = ''; legend.innerHTML = '';
+  Object.keys(CATS).forEach(key => {
+    const c = CATS[key];
+    const chip = document.createElement('div');
+    chip.className = 'catchip';
+    chip.innerHTML = `<span class="dot" style="background:${c.color}"></span>${c.label}`;
+    chip.addEventListener('click', () => {
+      if (state.activeCats.has(key)) state.activeCats.delete(key); else state.activeCats.add(key);
+      chip.classList.toggle('off', !state.activeCats.has(key));
+      renderMarkers(); renderEventList();
+    });
+    chipRow.appendChild(chip);
+
+    const lg = document.createElement('div');
+    lg.className = 'lg-item';
+    lg.innerHTML = `<span class="lg-swatch" style="background:${c.color}"></span>${c.label}`;
+    legend.appendChild(lg);
+  });
+}
+
+function renderEventList(){
+  const list = document.getElementById('eventList');
+  document.getElementById('evCount').textContent = timelineEvents.length + (state.search ? '' : '');
+  list.innerHTML = '';
+  timelineEvents.forEach((ev, i) => {
+    if (!catActiveAndVisible(ev)) return;
+    const row = document.createElement('div');
+    row.className = 'ev-mini' + (i === state.activeIndex ? ' active' : '');
+    row.dataset.idx = i;
+    row.innerHTML = `<span class="ev-mini-date">${ev.calendarDate}${ev.scope === 'island' ? ' \u00b7 \ud83c\udfdd' : ''}</span>${ev.title}`;
+    row.addEventListener('click', () => {
+      setActiveIndex(i, true);
+      if (ev.scope === 'island') openIslandModal(ev.id);
+    });
+    list.appendChild(row);
+  });
+  mentionedOnly.forEach(ev => {
+    if (!catActiveAndVisible(ev)) return;
+    const row = document.createElement('div');
+    row.className = 'ev-mini';
+    row.innerHTML = `<span class="ev-mini-date">Mentioned only</span>${ev.title}`;
+    row.addEventListener('click', () => jumpToEvent(ev.id));
+    list.appendChild(row);
+  });
+}
+function updateEventListActive(){
+  document.querySelectorAll('#eventList .ev-mini[data-idx]').forEach(row => {
+    row.classList.toggle('active', parseInt(row.dataset.idx, 10) === state.activeIndex);
+  });
+}
+
+/* ---------------- SEARCH ---------------- */
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  state.search = e.target.value.trim();
+  renderMarkers(); renderEventList();
+});
+
+/* ---------------- TOGGLES ---------------- */
+document.getElementById('toggleMentioned').addEventListener('change', (e) => { state.showMentioned = e.target.checked; renderMarkers(); renderEventList(); });
+document.getElementById('toggleRoute').addEventListener('change', (e) => { state.showRoute = e.target.checked; redrawRoute(); });
+document.getElementById('toggleFade').addEventListener('change', (e) => { state.fadeEarlier = e.target.checked; redrawRoute(); });
+document.getElementById('toggleTheories').addEventListener('change', (e) => {
+  state.showTheories = e.target.checked;
+  document.getElementById('theoryBox').classList.toggle('show', state.showTheories);
+  if (state.showTheories){
+    document.getElementById('theoryBox').innerHTML = THEORIES.map(t => `<b>${t.label}:</b> ${t.note}`).join('<hr style="border:none;border-top:1px solid rgba(166,58,50,.25);margin:8px 0;">');
+  }
+  renderMarkers();
+});
+document.getElementById('baseStyleSelect').addEventListener('change', (e) => setBaseTiles(e.target.value));
+document.getElementById('sidebarToggle').addEventListener('click', () => {
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('collapsed');
+  document.getElementById('sidebarToggle').textContent = sb.classList.contains('collapsed') ? '\u25b8' : '\u25c2';
+});
+
+/* ---------------- THEMES ---------------- */
+function applyTheme(theme){
+  document.body.className = theme;
+  document.querySelectorAll('.headctrls .modebtn[data-theme]').forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
+  if (theme === 'theme-parchment'){
+    setBaseTiles('antique');
+  } else if (theme === 'theme-modern'){
+    setBaseTiles('modern');
+  } else if (theme === 'theme-night'){
+    setBaseTiles('modern');
+    map.getPane('tilePane').classList.add('night-filter');
+  }
+}
+document.getElementById('themeParchment').addEventListener('click', () => applyTheme('theme-parchment'));
+document.getElementById('themeModern').addEventListener('click', () => applyTheme('theme-modern'));
+document.getElementById('themeNight').addEventListener('click', () => applyTheme('theme-night'));
+
+/* ---------------- ISLAND VIEW ---------------- */
+function renderIslandSvg(){
+  const wrap = document.getElementById('islandSvgWrap');
+  const pts = islandOnly.map(ev => {
+    const short = ev.title.replace(/^The /, '').replace(/\u2014.*$/, '').trim();
+    return `<g class="ipt" data-id="${ev.id}" onclick="onIslandPointClick('${ev.id}')">
+      <circle cx="${ev.ix}" cy="${ev.iy}" r="7" fill="${CATS[ev.category].color}" stroke="#FBF8F1" stroke-width="2"/>
+      <text x="${ev.ix + 11}" y="${ev.iy + 4}">${short.length > 22 ? short.slice(0,20)+'\u2026' : short}</text>
+    </g>`;
+  }).join('');
+
+  const pathPts = islandOnly.map(ev => `${ev.ix},${ev.iy}`).join(' ');
+
+  wrap.innerHTML = `
+  <svg viewBox="0 0 700 560" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="sea" cx="50%" cy="50%" r="75%">
+        <stop offset="0%" stop-color="#cfe4dd"/>
+        <stop offset="100%" stop-color="#a9c9c2"/>
+      </radialGradient>
+    </defs>
+    <rect x="0" y="0" width="700" height="560" fill="url(#sea)"/>
+    ${Array.from({length:5}).map((_,i)=>`<path d="M0 ${60+i*110} Q175 ${40+i*110} 350 ${60+i*110} T700 ${60+i*110}" fill="none" stroke="#8fb3ac" stroke-width="1" opacity="0.5"/>`).join('')}
+    <path d="M90,300 C60,250 90,190 160,165 C230,135 300,110 380,140
+             C440,120 520,150 560,210 C610,230 620,300 580,340
+             C610,380 600,430 555,455 C520,490 460,480 420,455
+             C380,490 320,500 270,470 C220,500 150,485 130,440
+             C90,430 70,380 95,345 C70,330 65,310 90,300 Z"
+          fill="#DCC48F" stroke="#8a6b3d" stroke-width="2.5"/>
+    <path d="M300,180 Q330,160 365,175 Q400,160 430,185 Q410,210 375,205 Q340,215 300,180 Z" fill="#9fae6e" opacity="0.75"/>
+    <circle cx="345" cy="225" r="26" fill="#b7a78a" opacity="0.6"/>
+    <polyline points="${pathPts}" fill="none" stroke="#6E5B46" stroke-width="1.3" stroke-dasharray="4 5" opacity="0.55"/>
+    ${pts}
+    <g transform="translate(636,40)" opacity="0.8">
+      <circle r="24" fill="none" stroke="#B08D57" stroke-width="1.2"/>
+      <path d="M0,-20 L5,-2 L0,2 L-5,-2 Z" fill="#B08D57"/>
+      <text x="0" y="-28" text-anchor="middle" font-family="Cinzel" font-size="9" fill="#B08D57">N</text>
+    </g>
+  </svg>`;
+}
+
+window.onIslandPointClick = function(id){
+  const ev = byId[id];
+  setActiveIndex(ev.order, false);
+  showIslandDetail(id);
+};
+
+function showIslandDetail(id){
+  const ev = byId[id];
+  document.querySelectorAll('#islandSvgWrap .ipt').forEach(g => g.classList.toggle('active', g.dataset.id === id));
+  const detail = document.getElementById('islandDetail');
+  detail.innerHTML = `<h3>${ev.title}</h3>
+    <div class="pop-dates">${ev.narrativeDate} \u00b7 ${ev.calendarDate}<br>${confBadgeHTML(ev.confidence)}</div>
+    <p>${ev.summary}</p>
+    ${ev.quote ? `<blockquote style="font-family:var(--font-quote);font-style:italic;border-left:3px solid var(--brass);padding-left:9px;color:var(--ink-soft);">\u201c${ev.quote}\u201d</blockquote>` : ''}`;
+  const strip = document.getElementById('islandEventStrip');
+  strip.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+}
+
+function renderIslandStrip(){
+  const strip = document.getElementById('islandEventStrip');
+  strip.innerHTML = '';
+  islandOnly.forEach(ev => {
+    const b = document.createElement('button');
+    b.dataset.id = ev.id;
+    b.textContent = ev.title.length > 24 ? ev.title.slice(0,22) + '\u2026' : ev.title;
+    b.addEventListener('click', () => { setActiveIndex(ev.order, false); showIslandDetail(ev.id); });
+    strip.appendChild(b);
+  });
+}
+
+window.openIslandModal = function(id){
+  document.getElementById('islandModal').classList.add('show');
+  const fallback = timelineEvents[state.lastIslandIndex] ? timelineEvents[state.lastIslandIndex].id : 'island-landing';
+  showIslandDetail(id || fallback);
+};
+document.getElementById('islandBtn').addEventListener('click', () => openIslandModal());
+document.getElementById('islandClose').addEventListener('click', () => document.getElementById('islandModal').classList.remove('show'));
+document.getElementById('islandModal').addEventListener('click', (e) => { if (e.target.id === 'islandModal') document.getElementById('islandModal').classList.remove('show'); });
+
+function updateIslandActive(){
+  if (!document.getElementById('islandModal').classList.contains('show')) return;
+  const ev = timelineEvents[state.activeIndex];
+  if (ev.scope === 'island') showIslandDetail(ev.id);
+}
+
+/* ---------------- INIT ---------------- */
+applyTheme('theme-parchment');
+renderChipsAndLegend();
+renderMarkers();
+renderTicks();
+renderEventList();
+renderIslandSvg();
+renderIslandStrip();
+setActiveIndex(0, false);
+map.fitBounds(L.latLngBounds(LOCATIONS.filter(l=>l.scope==='world').map(l=>[l.lat,l.lng])).pad(0.15));
+</script>
+</body>
+</html>
+
