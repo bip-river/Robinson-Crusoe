@@ -213,6 +213,10 @@
   .conf-dash{ width:16px; height:0; border-top:2px solid var(--ink-soft); display:inline-block; }
   .conf-dash.strong{ border-top-style:dashed; }
   .conf-dash.spec{ border-top-style:dotted; }
+  .track-key{ margin-top:5px; }
+  .track-dash{ width:18px; height:0; display:inline-block; border-top-width:3px; border-top-style:dotted; }
+  .track-dash.sea{ border-top-color:#A63A32; }
+  .track-dash.land{ border-top-color:#6E5B46; border-top-style:dashed; }
 
   #theoryBox{
     display:none; margin-top:10px; background: rgba(166,58,50,0.08);
@@ -331,11 +335,23 @@
   #islandInfo .pop-dates{ font-family:var(--font-ui); font-size:0.75rem; color:var(--ink-soft); margin-bottom:8px; }
   #islandInfo p{ font-size:0.94rem; line-height:1.5; }
   .ipt{ cursor:pointer; }
-  .ipt circle{ transition: r .12s; }
-  .ipt.active circle{ r:10; }
-  @media (hover:hover){ .ipt:hover circle{ r:10; } }
-  .ipt.active circle{ stroke: var(--rust); stroke-width:2.5; }
+  /* Scoped to .dot so the confidence halo beside it is left alone. */
+  .ipt .dot{ transition: r .12s; }
+  .ipt.active .dot{ r:9.5; stroke: var(--rust); stroke-width:2.5; }
+  @media (hover:hover){ .ipt:hover .dot{ r:9.5; } }
   .ipt text{ font-family:var(--font-ui); font-size:11px; fill:var(--ink); pointer-events:none; }
+  /* Event labels sit over terrain, so give them a paper-coloured halo. */
+  .ipt .ilbl{ font-size:11px; font-weight:600; paint-order:stroke;
+              stroke:#F3E9D2; stroke-width:3.2px; stroke-linejoin:round; }
+  .ipt.active .ilbl{ fill:var(--rust); }
+  #islandSvgWrap .feat{
+    font-family:var(--font-display); font-size:12px; fill:#6b5636;
+    letter-spacing:0.06em; text-anchor:middle; pointer-events:none;
+    paint-order:stroke; stroke:#DCC48F; stroke-width:3px; stroke-linejoin:round;
+  }
+  #islandSvgWrap .feat.sea-lbl{ fill:#33605f; stroke:#bcd7d1; letter-spacing:0.12em; }
+  #islandSvgWrap .lg-t{ font-family:var(--font-display); font-size:9.5px; fill:#6b5636; letter-spacing:0.1em; }
+  #islandSvgWrap .lg-s{ font-family:var(--font-ui); font-size:9.5px; fill:#4a3f30; }
   #islandEventStrip{ display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
   #islandEventStrip button{
     font-family:var(--font-ui); font-size:0.72rem; border:1px solid var(--paper-line);
@@ -569,6 +585,10 @@
           <span><i class="conf-dash strong"></i> Strong inference</span>
           <span><i class="conf-dash spec"></i> Speculative</span>
         </div>
+        <div class="conf-key track-key">
+          <span><i class="track-dash sea"></i> Sea passage</span>
+          <span><i class="track-dash land"></i> Overland</span>
+        </div>
       </div>
 
       <div class="sb-section" style="border-bottom:none;">
@@ -759,111 +779,111 @@ const LOCATIONS = [
   quote:"I was the only person saved of all the ship's company",
   related:["atlantic-storm","island-landing"] },
 
-{ id:"island-landing", order:13, scope:"island", category:"wreck", ix:120, iy:300,
+{ id:"island-landing", order:13, scope:"island", category:"wreck", ix:300, iy:182, lp:"n", ilabel:"Landing Beach",
   title:"The Landing Beach", narrativeDate:"Day 1", calendarDate:"30 September 1659",
   confidence:"explicit",
   summary:"Exhausted and half-drowned, Crusoe drags himself onto a north-shore beach, the sole survivor, with nothing but a knife, a pipe, and a little tobacco.",
   related:["shipwreck","island-salvage"] },
 
-{ id:"island-salvage", order:14, scope:"island", category:"wreck", ix:150, iy:265,
+{ id:"island-salvage", order:14, scope:"island", category:"wreck", ix:306, iy:138, lp:"e", ilabel:"The Wreck",
   title:"Salvaging the Wreck", narrativeDate:"First weeks", calendarDate:"October 1659",
   confidence:"explicit",
   summary:"Over repeated raft trips to the grounded hulk, Crusoe hauls ashore tools, arms, food, carpenter's stores, and — crucially — seed corn and barley, before the wreck finally breaks apart.",
   related:["island-landing","island-castle"] },
 
-{ id:"island-castle", order:15, scope:"island", category:"settlement", ix:300, iy:230,
+{ id:"island-castle", order:15, scope:"island", category:"settlement", ix:300, iy:228, lp:"e", ilabel:"The Castle",
   title:"The \u201cCastle\u201d — First Dwelling", narrativeDate:"Weeks 3\u20138", calendarDate:"Oct\u2013Nov 1659",
   confidence:"explicit",
   summary:"Crusoe fortifies a hollow in a rock face with a palisade of stakes, creating a defensible cave-and-tent dwelling he calls his castle — his home for the next 28 years.",
   related:["island-salvage","island-journal"] },
 
-{ id:"island-journal", order:16, scope:"island", category:"settlement", ix:335, iy:205,
+{ id:"island-journal", order:16, scope:"island", category:"settlement", ix:246, iy:178, lp:"w", ilabel:"Calendar Post",
   title:"Journal & Calendar Post", narrativeDate:"Begins keeping time", calendarDate:"c. November 1659",
   confidence:"explicit",
   summary:"Fearing he will lose track of the days, Crusoe cuts a post into a large cross and notches it daily, alongside a written journal kept until his ink runs dry.",
   related:["island-castle","island-illness"] },
 
-{ id:"island-illness", order:17, scope:"island", category:"discovery", ix:310, iy:255,
+{ id:"island-illness", order:17, scope:"island", category:"discovery", ix:334, iy:252, lp:"e", ilabel:"Fever & Conversion",
   title:"Fever & Conversion", narrativeDate:"~9 months in", calendarDate:"June 1660",
   confidence:"explicit",
   summary:"A violent ague brings Crusoe to the edge of death and to a religious crisis. A feverish vision and a chance reading of scripture mark a genuine turn toward faith that reshapes the rest of his account.",
   related:["island-journal","island-grain"] },
 
-{ id:"island-grain", order:18, scope:"island", category:"discovery", ix:275, iy:185,
+{ id:"island-grain", order:18, scope:"island", category:"discovery", ix:272, iy:278, lp:"w", ilabel:"The Barley Ground",
   title:"The Providence of the Barley", narrativeDate:"~Year 1", calendarDate:"1660",
   confidence:"explicit",
   summary:"Stalks of barley and rice sprout near his fort from a shaken-out, seemingly empty seed bag. Crusoe first takes it for a miracle before remembering the leftover grain — and starts planting deliberately.",
   related:["island-illness","island-earthquake"] },
 
-{ id:"island-earthquake", order:19, scope:"island", category:"discovery", ix:345, iy:245,
+{ id:"island-earthquake", order:19, scope:"island", category:"discovery", ix:252, iy:212, lp:"w", ilabel:"The Earthquake",
   title:"The Earthquake", narrativeDate:"~Year 1", calendarDate:"1660",
   confidence:"explicit",
   summary:"A sudden earthquake — followed by a hurricane — nearly brings the rock face down onto his dwelling, convincing Crusoe to build a safer retreat away from the cliff.",
   related:["island-grain","island-bower"] },
 
-{ id:"island-bower", order:20, scope:"island", category:"settlement", ix:430, iy:340,
+{ id:"island-bower", order:20, scope:"island", category:"settlement", ix:448, iy:300, lp:"e", ilabel:"The Bower",
   title:"The \u201cCountry House\u201d / Bower", narrativeDate:"Ongoing", calendarDate:"c. 1660s",
   confidence:"explicit",
   summary:"Inland, Crusoe builds and hedges a second retreat — his \u2018bower\u2019 or country house — visited on his circuits of the island and eventually ringed by a young orchard.",
   related:["island-earthquake","island-goats"] },
 
-{ id:"island-goats", order:21, scope:"island", category:"settlement", ix:475, iy:250,
+{ id:"island-goats", order:21, scope:"island", category:"settlement", ix:520, iy:214, lp:"e", ilabel:"Goat Enclosures",
   title:"Taming the Goats", narrativeDate:"Years 2\u20133 onward", calendarDate:"c. 1661\u201363",
   confidence:"explicit",
   summary:"After hunting wild goats for meat, Crusoe begins trapping kids and breeding them in enclosures, eventually keeping a domesticated herd for milk, cheese, and butter.",
   related:["island-bower","island-canoe"] },
 
-{ id:"island-canoe", order:22, scope:"island", category:"settlement", ix:190, iy:400,
+{ id:"island-canoe", order:22, scope:"island", category:"settlement", ix:300, iy:378, lp:"e", ilabel:"The Great Canoe",
   title:"The Abandoned Canoe", narrativeDate:"~Year 4", calendarDate:"c. 1663",
   confidence:"strong",
   summary:"Crusoe fells a great tree to hollow out a canoe large enough to reach the mainland — then discovers, too late, that he has no way to drag it the hundred-odd yards down to the water.",
   related:["island-goats","island-boat2"] },
 
-{ id:"island-boat2", order:23, scope:"island", category:"settlement", ix:235, iy:435,
+{ id:"island-boat2", order:23, scope:"island", category:"settlement", ix:238, iy:398, lp:"w", ilabel:"The Second Boat",
   title:"A Smaller Boat, and a Dangerous Current", narrativeDate:"Later years", calendarDate:"c. mid-1660s",
   confidence:"strong",
   summary:"A second, smaller canoe built nearer the coast lets Crusoe circle part of the island by sea — until a powerful offshore current very nearly sweeps him away for good.",
   related:["island-canoe","island-footprint"] },
 
-{ id:"island-footprint", order:24, scope:"island", category:"discovery", ix:530, iy:420,
+{ id:"island-footprint", order:24, scope:"island", category:"discovery", ix:196, iy:350, lp:"w", ilabel:"The Footprint",
   title:"The Footprint", narrativeDate:"~Year 15\u201318", calendarDate:"c. mid-1670s",
   confidence:"speculative",
   summary:"On a distant shore he rarely visits, Crusoe finds a single human footprint in the sand and is thrown into years of terror and fortification. Defoe marks this by year-count rather than calendar date, so the exact year is genuinely uncertain.",
   quote:"I stood like one thunderstruck",
   related:["island-boat2","island-feast"] },
 
-{ id:"island-feast", order:25, scope:"island", category:"discovery", ix:565, iy:445,
+{ id:"island-feast", order:25, scope:"island", category:"discovery", ix:230, iy:424, lp:"s", ilabel:"Cannibal Feast",
   title:"Remains of a Cannibal Feast", narrativeDate:"Shortly after the footprint", calendarDate:"c. mid-1670s",
   confidence:"speculative",
   summary:"Exploring the same far shore, Crusoe finds skulls, bones, and the ashes of a fire — grim evidence that parts of the island are visited by mainland raiders on ritual voyages.",
   related:["island-footprint","island-wreck2"] },
 
-{ id:"island-wreck2", order:26, scope:"island", category:"discovery", ix:155, iy:465,
+{ id:"island-wreck2", order:26, scope:"island", category:"discovery", ix:648, iy:300, lp:"s", ilabel:"Spanish Wreck",
   title:"The Spanish Wreck", narrativeDate:"~Year 26", calendarDate:"c. 1685",
   confidence:"strong",
   summary:"A ship wrecks in a storm within sight of the island. Crusoe rows out to find no survivors, only salvage — money he now regards as worthless, and goods that renew his hope of eventual rescue.",
   related:["island-feast","friday-rescue"] },
 
-{ id:"friday-rescue", order:27, scope:"island", category:"encounter", ix:545, iy:400,
+{ id:"friday-rescue", order:27, scope:"island", category:"encounter", ix:292, iy:446, lp:"s", ilabel:"Rescuing Friday",
   title:"Rescuing Friday", narrativeDate:"His 24th year on the island", calendarDate:"c. 1686",
   confidence:"explicit",
   summary:"Crusoe intervenes in a cannibal raid and saves a captive, naming him Friday for the day of the rescue. Friday quickly becomes companion, student, and — in Crusoe's own account — devoted friend.",
   quote:"my man Friday",
   related:["island-wreck2","friday-father"] },
 
-{ id:"friday-father", order:28, scope:"island", category:"encounter", ix:565, iy:412,
+{ id:"friday-father", order:28, scope:"island", category:"encounter", ix:352, iy:450, lp:"e", ilabel:"Friday's Father",
   title:"Friday's Father, and a Spaniard", narrativeDate:"Shortly after", calendarDate:"c. 1686",
   confidence:"explicit",
   summary:"In a second raid, Crusoe and Friday free two more prisoners: Friday's own father, and a shipwrecked Spaniard, who tells of other Spaniards stranded on the mainland.",
   related:["friday-rescue","mutiny-arrival"] },
 
-{ id:"mutiny-arrival", order:29, scope:"island", category:"encounter", ix:135, iy:315,
+{ id:"mutiny-arrival", order:29, scope:"island", category:"encounter", ix:470, iy:108, lp:"e", ilabel:"Mutineers' Ship",
   title:"The English Ship — Mutiny", narrativeDate:"His 28th year", calendarDate:"December 1686",
   confidence:"explicit",
   summary:"An English ship anchors offshore; its crew has mutinied and marooned their own captain. Crusoe strikes a bargain with the captain to help retake the vessel.",
   related:["friday-father","island-departure"] },
 
-{ id:"island-departure", order:30, scope:"island", category:"return", ix:120, iy:300,
+{ id:"island-departure", order:30, scope:"island", category:"return", ix:516, iy:88, lp:"e", ilabel:"Departure",
   title:"Leaving the Island", narrativeDate:"28 years, 2 months, 19 days", calendarDate:"19 December 1686",
   confidence:"explicit",
   summary:"With the mutineers left behind at their own request, Crusoe boards the recovered ship and sails for home, taking his goatskin cap, parrot, umbrella, and long-useless money as relics.",
@@ -975,43 +995,177 @@ const theoryLayer = L.layerGroup();
 let islandGateMarker = null;
 let shipMarker = null;
 
-/* ---------------- ROUTE GEOMETRY ---------------- */
+/* ---------------- ROUTE GEOMETRY ----------------
+   Legs between consecutive events, with the waypoints a 17th-century voyage
+   would actually have followed. Sea legs work the trades, the Gulf Stream and
+   the westerlies rather than cutting straight lines across continents; land
+   legs follow the roads Defoe's text implies. `mode` drives the styling, so
+   the overland return from Lisbon reads as overland — which is the point of
+   it in the novel.
+
+   Keyed "fromId>toId". `via` holds intermediate points only; the leg's two
+   endpoints come from the events themselves. A leg with `steps` is mixed,
+   each step carrying its own mode.                                        */
+const LEGS = {
+  /* --- England, and out to Guinea --- */
+  'york-birth>hull-departure': { mode:'land', via:[[53.90,-1.02],[53.83,-0.78],[53.77,-0.52]] },
+
+  'hull-departure>yarmouth-storm': { mode:'sea', via:[
+    [53.71,-0.28],[53.62,0.02],[53.58,0.15],   // down the Humber, past Spurn Head
+    [53.20,0.55],[52.98,0.95],                 // the Wash, north Norfolk
+    [52.90,1.38],[52.75,1.72] ] },             // round Cromer to Yarmouth Roads
+
+  'yarmouth-storm>london-guinea1': { mode:'sea', via:[
+    [52.30,1.78],[52.05,1.62],                 // Orford Ness
+    [51.85,1.45],[51.62,1.10],                 // the Naze, into the estuary
+    [51.47,0.70],[51.46,0.28],[51.50,0.02] ] },// the Thames up to the Pool
+
+  'london-guinea1>guinea-coast1': { mode:'sea', via:[
+    [51.45,0.60],[51.40,1.42],[50.95,1.55],    // out of the Thames, Dover Strait
+    [50.40,-0.50],[50.05,-2.50],[49.70,-4.60], // down Channel
+    [48.45,-5.30],[47.00,-6.20],               // Ushant, offshore Biscay
+    [44.50,-9.00],[42.90,-9.60],               // clear of the Bay, Finisterre
+    [39.00,-10.20],[35.50,-10.50],             // off Portugal
+    [30.50,-14.00],[27.80,-16.00],             // the Canaries
+    [22.00,-19.00],[16.90,-21.40],             // outside the Cape Verde islands
+    [11.00,-19.00],[7.00,-16.00],              // well clear of the Guinea bulge
+    [4.50,-11.00],[3.80,-5.50],                // south of Cape Palmas
+    [4.62,-2.10],[4.85,-1.40],[5.15,-0.80] ] },// seaward of Cape Three Points, up to the Gold Coast
+
+  /* --- Taken by corsairs, slavery, escape --- */
+  'guinea-coast1>sallee-capture': { mode:'sea', via:[
+    [4.30,-6.50],[3.80,-8.50],                 // passing south of Cape Palmas
+    [4.50,-12.00],[6.00,-16.00],[12.00,-20.00],// standing well out from the Guinea shore
+    [18.00,-22.00],[24.00,-19.50],[27.20,-17.50] ] },
+
+  'sallee-capture>sallee-slavery': { mode:'sea', via:[
+    [29.50,-14.20],[31.50,-11.00],[33.20,-8.60],[33.90,-7.30] ] },
+
+  'sallee-slavery>xury-escape': { mode:'sea', via:[
+    [33.60,-8.20],[32.20,-9.60],[30.00,-10.40], // south along the Moroccan shore
+    [27.50,-13.60],[24.00,-15.60],              // Cape Bojador
+    [20.50,-17.40],[17.50,-16.60] ] },          // Cape Blanc, down to the Senegal
+
+  'xury-escape>portuguese-rescue': { mode:'sea', via:[[15.20,-18.60],[15.40,-21.50]] },
+
+  'portuguese-rescue>brazil-plantation': { mode:'sea', via:[
+    [13.00,-26.50],[9.50,-29.50],[5.50,-31.00], // the westward arc on the NE trades
+    [1.00,-31.50],[-3.50,-32.50],               // across the doldrums
+    [-7.50,-33.50],[-10.50,-36.00],[-12.30,-37.80] ] }, // onto the Brazil coast
+
+  /* --- The slaving voyage that ends in the wreck --- */
+  'guinea-departure2>atlantic-storm': { mode:'sea', via:[
+    [-12.40,-37.90],[-11.20,-36.80],               // out of the Bahia bight, seaward of the coast
+    [-9.00,-35.00],[-6.50,-34.30],                 // north past Cabo Branco
+    [-3.00,-37.00],[1.00,-42.00],[5.00,-47.00] ] },// then driven NW by the hurricane
+
+  'atlantic-storm>shipwreck': { mode:'sea', via:[[9.20,-53.50],[10.40,-57.00],[11.00,-59.40]] },
+
+  /* --- Home, the long way --- */
+  'island-departure>england-return': { mode:'sea', via:[
+    [12.60,-61.60],[15.50,-64.00],[19.50,-67.50],  // NW through the islands, north of Puerto Rico
+    [24.00,-73.50],[28.50,-78.50],                 // into the Florida Strait
+    [33.00,-77.00],[37.00,-72.00],                 // north on the Gulf Stream
+    [41.00,-63.00],[43.50,-52.00],                 // the Banks
+    [45.50,-40.00],[47.50,-28.00],                 // easting on the westerlies
+    [49.00,-18.00],[49.80,-9.00],[50.20,-4.50],[50.60,-2.00] ] },
+
+  'england-return>lisbon-estate': { mode:'sea', via:[
+    [50.30,-2.60],[49.60,-6.20],[48.20,-8.00],  // out of the Channel
+    [45.00,-9.50],[42.80,-9.70],                // offshore Biscay, Finisterre
+    [40.50,-9.60],[38.90,-9.50] ] },            // down the Portuguese coast
+
+  /* Overland, deliberately: he had had enough of the sea. */
+  'lisbon-estate>pyrenees': { mode:'land', via:[
+    [38.90,-8.30],[38.88,-6.97],                // out of Lisbon toward Badajoz
+    [39.47,-6.37],[40.42,-3.70],                // Madrid
+    [41.65,-4.72],[42.34,-3.70],                // Valladolid, Burgos
+    [42.46,-2.45],[42.81,-1.65] ] },            // Logroño, Pamplona
+
+  'pyrenees>france-england': { mode:'land', via:[
+    [43.01,-1.32],[43.16,-1.24],                // the pass
+    [43.30,-0.37],[43.60,1.44],                 // Pau, Toulouse
+    [44.36,2.57],[44.93,2.44] ] },              // up through the Massif
+
+  'france-england>coda': { steps:[
+    { mode:'land', via:[[46.16,2.41],[47.39,1.68],[48.86,2.35],[49.60,2.30],[50.95,1.86]] }, // Orléans, Paris, Calais
+    { mode:'sea',  via:[[51.02,1.60],[51.10,1.35]] },                                        // the Strait
+    { mode:'land', via:[[51.28,1.08],[51.38,0.55],[51.47,0.07]] } ]                          // Dover road to London
+  }
+};
+
 function positionFor(ev){
   if (ev.scope === 'world') return [ev.lat, ev.lng];
   return [byId['shipwreck'].lat, byId['shipwreck'].lng];
 }
+/* Expands each move into its leg's waypoints. Every vertex carries the mode of
+   the segment arriving at it, so a track can change between sea and land
+   mid-leg (the Calais crossing). segIndexAtOrder still maps an event to its
+   arrival vertex, so the timeline, the fade and the ship marker are unchanged
+   in behaviour — they just index into a longer, truer path. */
 function computeRoute(){
-  const uniq = []; const segIndexAtOrder = []; let last = null;
+  const verts = []; const segIndexAtOrder = []; let prevEv = null;
   timelineEvents.forEach(ev => {
     const p = positionFor(ev);
-    if (!last || last[0] !== p[0] || last[1] !== p[1]) { uniq.push(p); last = p; }
-    segIndexAtOrder.push(uniq.length - 1);
+    if (!prevEv){
+      verts.push({ ll:p, mode:'sea' });
+      segIndexAtOrder.push(0); prevEv = ev; return;
+    }
+    const prevLL = verts[verts.length - 1].ll;
+    if (prevLL[0] === p[0] && prevLL[1] === p[1]){   // island events, and Bahia twice
+      segIndexAtOrder.push(verts.length - 1); prevEv = ev; return;
+    }
+    const leg = LEGS[prevEv.id + '>' + ev.id];
+    const steps = leg ? (leg.steps || [leg]) : [{ mode:'sea', via:[] }];
+    steps.forEach((st, si) => {
+      (st.via || []).forEach(ll => verts.push({ ll, mode: st.mode }));
+      if (si === steps.length - 1) verts.push({ ll:p, mode: st.mode });
+    });
+    segIndexAtOrder.push(verts.length - 1); prevEv = ev;
   });
-  return { uniq, segIndexAtOrder };
+  return { verts, segIndexAtOrder };
 }
 const ROUTE = computeRoute();
+
+const TRACK_STYLE = {
+  sea:  { color:'#A63A32', dashArray:'1 7', lineCap:'round' },
+  land: { color:'#6E5B46', dashArray:'7 5', lineCap:'butt'  }
+};
+
+/* Consecutive segments sharing a mode and an opacity band become one polyline,
+   so the fade stays smooth without drawing a path per vertex. */
+function trackRuns(verts, upto, fade){
+  const runs = [];
+  for (let i = 1; i <= upto; i++){
+    const mode = verts[i].mode;
+    const t = upto > 0 ? i / upto : 1;
+    const op = fade ? Math.max(0.16, Math.round((0.16 + 0.84 * t * t) * 8) / 8) : 0.85;
+    const last = runs[runs.length - 1];
+    if (last && last.mode === mode && last.op === op) last.pts.push(verts[i].ll);
+    else runs.push({ mode, op, pts:[verts[i-1].ll, verts[i].ll] });
+  }
+  return runs;
+}
 
 function redrawRoute(){
   routeLayer.clearLayers();
   const upto = ROUTE.segIndexAtOrder[state.activeIndex];
-  const pts = ROUTE.uniq.slice(0, upto + 1);
 
   if (state.showFullRoute){
-    L.polyline(ROUTE.uniq, { color:'#B08D57', weight:1.5, opacity:0.35, dashArray:'2 6' }).addTo(routeLayer);
+    trackRuns(ROUTE.verts, ROUTE.verts.length - 1, false).forEach(r => {
+      L.polyline(r.pts, Object.assign({}, TRACK_STYLE[r.mode], { weight:1.5, opacity:0.3 })).addTo(routeLayer);
+    });
   }
-  if (state.showRoute && pts.length > 1){
-    if (state.fadeEarlier){
-      for (let i = 0; i < pts.length - 1; i++){
-        const age = (pts.length - 1) - i;
-        const opacity = Math.max(0.14, 1 - age * 0.13);
-        L.polyline([pts[i], pts[i+1]], { color:'#A63A32', weight:3, opacity, dashArray:'1 7', lineCap:'round' }).addTo(routeLayer);
-      }
-    } else {
-      L.polyline(pts, { color:'#A63A32', weight:3, opacity:0.85, dashArray:'1 7', lineCap:'round' }).addTo(routeLayer);
-    }
+  if (state.showRoute && upto > 0){
+    trackRuns(ROUTE.verts, upto, state.fadeEarlier).forEach(r => {
+      L.polyline(r.pts, Object.assign({}, TRACK_STYLE[r.mode], { weight:3, opacity:r.op })).addTo(routeLayer);
+    });
   }
-  const shipPos = pts.length ? pts[pts.length - 1] : ROUTE.uniq[0];
-  const shipIcon = L.divIcon({ className:'', html:'<div class="ship-icon">\u26F5</div>', iconSize:[22,22], iconAnchor:[11,11] });
+  const head = ROUTE.verts[Math.max(0, upto)];
+  const shipPos = head.ll;
+  /* He rides the last stretch home rather than sailing it \u2014 show that. */
+  const glyph = head.mode === 'land' ? '\uD83D\uDC0E' : '\u26F5';
+  const shipIcon = L.divIcon({ className:'', html:`<div class="ship-icon">${glyph}</div>`, iconSize:[22,22], iconAnchor:[11,11] });
   shipMarker = L.marker(shipPos, { icon:shipIcon, zIndexOffset:1000, interactive:false }).addTo(routeLayer);
 
   if (state.following) map.panTo(shipPos, { animate:true, duration:0.6 });
@@ -1195,8 +1349,13 @@ document.getElementById('btnFollow').addEventListener('click', () => {
   document.getElementById('btnFollow').classList.toggle('active', state.following);
   if (state.following) redrawRoute();
 });
+/* Fit the track, not just the pins: the Gulf Stream leg home reaches further
+   west than any event marker does. */
+function routeBounds(){
+  return L.latLngBounds(ROUTE.verts.map(v => v.ll)).pad(0.06);
+}
 document.getElementById('btnReset').addEventListener('click', () => {
-  map.setView([18, -35], 3);
+  map.fitBounds(routeBounds());
 });
 
 /* ---------------- SIDEBAR: chips, legend, list ---------------- */
@@ -1347,40 +1506,161 @@ document.getElementById('themeParchment').addEventListener('click', () => applyT
 document.getElementById('themeModern').addEventListener('click', () => applyTheme('theme-modern'));
 document.getElementById('themeNight').addEventListener('click', () => applyTheme('theme-night'));
 
-/* ---------------- ISLAND VIEW ---------------- */
+/* ---------------- ISLAND VIEW ----------------
+   The coastline below is interpretive, but the arrangement is not arbitrary:
+   north is up, Crusoe lands on the north shore as his own account says, the
+   castle stands on the hillside above that bay, the vale and the goat country
+   lie inland and east, and the shore the cannibals resort to is the far south-
+   west \u2014 the side facing the mainland he could see from the hill.            */
+const ISLAND_OUTLINE =
+  'M170,205 C178,176 200,154 232,144 ' +
+  'C252,138 262,148 272,162 ' +          /* west horn of the bay */
+  'C292,176 316,176 336,160 ' +          /* the bay itself, where he came ashore */
+  'C348,150 362,136 384,130 ' +          /* east horn */
+  'C436,122 486,134 524,158 C562,180 590,206 604,238 ' +
+  'C618,246 630,250 628,258 C626,268 610,272 600,286 ' +   /* the eastern Point */
+  'C586,320 562,352 530,380 C492,412 448,434 400,446 ' +
+  'C352,458 308,458 270,448 C248,442 228,426 214,406 ' +   /* the creek mouth */
+  'C200,384 178,352 172,316 C164,278 162,236 170,205 Z';
+
+/* Only journeys Crusoe actually describes making. The old dashed line joined
+   the events in date order, which drew eighteen crossings of an island he
+   mostly walked in circuits. */
+const JOURNEYS = [
+  { mode:'boat', label:'Raft trips out to the grounded ship',
+    pts:[[300,182],[302,158],[304,138]] },
+  { mode:'foot', label:'His circuit: castle, corn ground, bower, goat enclosures',
+    pts:[[300,228],[272,278],[336,286],[402,298],[448,300],[496,254],[520,214]] },
+  { mode:'foot', label:'Across the island to the far shore',
+    pts:[[300,228],[268,306],[244,352],[230,398],[230,424]] },
+  { mode:'boat', label:'The canoe voyage, and the current that nearly carried him off',
+    pts:[[238,398],[208,412],[182,396],[160,356],[150,300],[154,242],[166,210]] },
+];
+
+function islandLabelPos(ev){
+  const d = 12;
+  switch (ev.lp){
+    case 'w': return { x: ev.ix - d, y: ev.iy + 4,      anchor:'end' };
+    case 'n': return { x: ev.ix,     y: ev.iy - d,      anchor:'middle' };
+    case 's': return { x: ev.ix,     y: ev.iy + d + 6,  anchor:'middle' };
+    default:  return { x: ev.ix + d, y: ev.iy + 4,      anchor:'start' };
+  }
+}
+
 function renderIslandSvg(){
   const wrap = document.getElementById('islandSvgWrap');
+
   const pts = islandOnly.map(ev => {
-    const short = ev.title.replace(/^The /, '').replace(/\u2014.*$/, '').trim();
+    const L = islandLabelPos(ev);
+    const col = CATS[ev.category].color;
+    /* Confidence shows as a halo around the dot, not as a dashed edge on it —
+       at this size a dashed 2px ring just reads as a smudge. */
+    const halo = ev.confidence === 'explicit' ? '' :
+      `<circle cx="${ev.ix}" cy="${ev.iy}" r="10.5" fill="none" stroke="${col}" stroke-width="1.3"
+               stroke-dasharray="${ev.confidence === 'strong' ? '5 3' : '1.5 3'}" opacity="0.85"/>`;
     return `<g class="ipt" data-id="${ev.id}" onclick="onIslandPointClick('${ev.id}')">
-      <circle cx="${ev.ix}" cy="${ev.iy}" r="7" fill="${CATS[ev.category].color}" stroke="#FBF8F1" stroke-width="2"/>
-      <text x="${ev.ix + 11}" y="${ev.iy + 4}">${short.length > 22 ? short.slice(0,20)+'\u2026' : short}</text>
+      ${halo}
+      <circle class="dot" cx="${ev.ix}" cy="${ev.iy}" r="6" fill="${col}" stroke="#FBF8F1" stroke-width="2.2"/>
+      <text class="ilbl" x="${L.x}" y="${L.y}" text-anchor="${L.anchor}">${ev.ilabel}</text>
     </g>`;
   }).join('');
 
-  const pathPts = islandOnly.map(ev => `${ev.ix},${ev.iy}`).join(' ');
+  const tracks = JOURNEYS.map(j => {
+    const d = j.pts.map((p,i) => `${i ? 'L' : 'M'}${p[0]},${p[1]}`).join(' ');
+    const st = j.mode === 'boat'
+      ? 'stroke="#2F5D62" stroke-width="1.8" stroke-dasharray="7 4"'
+      : 'stroke="#7A5C33" stroke-width="1.6" stroke-dasharray="1.5 4" stroke-linecap="round"';
+    return `<path d="${d}" fill="none" ${st} opacity="0.75"><title>${j.label}</title></path>`;
+  }).join('');
+
+  const feature = (x,y,txt,cls) => `<text class="feat ${cls||''}" x="${x}" y="${y}">${txt}</text>`;
 
   wrap.innerHTML = `
-  <svg viewBox="0 0 700 560" xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 700 560" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-label="Interpretive reconstruction of Crusoe's island">
     <defs>
       <radialGradient id="sea" cx="50%" cy="50%" r="75%">
-        <stop offset="0%" stop-color="#cfe4dd"/>
-        <stop offset="100%" stop-color="#a9c9c2"/>
+        <stop offset="0%" stop-color="#cfe4dd"/><stop offset="100%" stop-color="#a9c9c2"/>
       </radialGradient>
+      <pattern id="hatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+        <line x1="0" y1="0" x2="0" y2="6" stroke="#8a6b3d" stroke-width="1.1" opacity="0.5"/>
+      </pattern>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#3C6E71"/>
+      </marker>
     </defs>
+
     <rect x="0" y="0" width="700" height="560" fill="url(#sea)"/>
-    ${Array.from({length:5}).map((_,i)=>`<path d="M0 ${60+i*110} Q175 ${40+i*110} 350 ${60+i*110} T700 ${60+i*110}" fill="none" stroke="#8fb3ac" stroke-width="1" opacity="0.5"/>`).join('')}
-    <path d="M90,300 C60,250 90,190 160,165 C230,135 300,110 380,140
-             C440,120 520,150 560,210 C610,230 620,300 580,340
-             C610,380 600,430 555,455 C520,490 460,480 420,455
-             C380,490 320,500 270,470 C220,500 150,485 130,440
-             C90,430 70,380 95,345 C70,330 65,310 90,300 Z"
-          fill="#DCC48F" stroke="#8a6b3d" stroke-width="2.5"/>
-    <path d="M300,180 Q330,160 365,175 Q400,160 430,185 Q410,210 375,205 Q340,215 300,180 Z" fill="#9fae6e" opacity="0.75"/>
-    <circle cx="345" cy="225" r="26" fill="#b7a78a" opacity="0.6"/>
-    <polyline points="${pathPts}" fill="none" stroke="#6E5B46" stroke-width="1.3" stroke-dasharray="4 5" opacity="0.55"/>
+    ${Array.from({length:5}).map((_,i)=>`<path d="M0 ${60+i*110} Q175 ${40+i*110} 350 ${60+i*110} T700 ${60+i*110}" fill="none" stroke="#8fb3ac" stroke-width="1" opacity="0.4"/>`).join('')}
+
+    <path d="${ISLAND_OUTLINE}" fill="#DCC48F" stroke="#8a6b3d" stroke-width="2.5"/>
+
+    <!-- terrain: the vale and woods, the goat uplands, the savannah -->
+    <path d="M392,258 C428,240 470,246 486,272 C470,304 424,318 396,304 C380,290 380,268 392,258 Z"
+          fill="#9fae6e" opacity="0.72"/>
+    <path d="M300,340 C346,318 404,326 430,354 C408,390 340,404 302,386 C288,370 290,350 300,340 Z"
+          fill="#7d8f57" opacity="0.6"/>
+    <path d="M470,168 C512,158 556,178 566,206 C540,230 494,236 470,216 C458,200 458,178 470,168 Z"
+          fill="url(#hatch)" opacity="0.55"/>
+    <path d="M210,250 C252,236 286,248 292,276 C270,306 226,312 204,292 C196,276 198,258 210,250 Z"
+          fill="#c9c48d" opacity="0.5"/>
+    <!-- Castle Hill and its rock face -->
+    <path d="M262,200 C284,182 318,184 336,206 C320,232 282,234 262,216 Z" fill="#b7a78a" opacity="0.75"/>
+    <path d="M266,204 L336,208" stroke="#8a6b3d" stroke-width="3" opacity="0.8" stroke-linecap="round"/>
+    <!-- the creek, running up from the south-west shore -->
+    <path d="M206,402 C226,392 248,386 266,384" fill="none" stroke="#a9c9c2" stroke-width="7" stroke-linecap="round"/>
+    <!-- the race off the eastern point -->
+    <g opacity="0.75">
+      <path d="M624,236 C650,252 650,280 626,296" fill="none" stroke="#3C6E71" stroke-width="1.6" marker-end="url(#arrow)"/>
+      <path d="M636,214 C668,240 668,292 638,318" fill="none" stroke="#3C6E71" stroke-width="1.2" opacity="0.7"/>
+    </g>
+
+    ${feature(300,116,'THE BAY','sea-lbl')}
+    ${feature(150,432,'THE CREEK','sea-lbl')}
+    ${feature(300,206,'Castle Hill')}
+    ${feature(440,270,'The Vale')}
+    ${feature(366,368,'The Woods')}
+    ${feature(518,196,'Goat Hills')}
+    ${feature(220,300,'The Savannah')}
+    ${feature(360,486,"CANNIBALS' SHORE",'sea-lbl')}
+    ${feature(640,180,'The Point','sea-lbl')}
+
+    <!-- bearing to the mainland he saw from the hill -->
+    <g opacity="0.8">
+      <path d="M120,300 L58,300" stroke="#B08D57" stroke-width="1.4" marker-end="url(#arrow)"/>
+      <text class="feat sea-lbl" x="88" y="288" text-anchor="middle">to the mainland</text>
+      <text class="feat sea-lbl" x="88" y="316" text-anchor="middle">~20 leagues W</text>
+    </g>
+
+    ${tracks}
     ${pts}
-    <g transform="translate(636,40)" opacity="0.8">
+
+    <!-- legend -->
+    <g transform="translate(20,436)">
+      <rect x="0" y="0" width="152" height="112" rx="4" fill="#FBF8F1" opacity="0.88" stroke="#B08D57" stroke-width="0.8"/>
+      <text class="lg-t" x="10" y="18">PLACEMENT</text>
+      <circle cx="17" cy="32" r="5" fill="#6E5B46" stroke="#FBF8F1" stroke-width="2"/>
+      <text class="lg-s" x="30" y="35">Explicit in text</text>
+      <circle cx="17" cy="50" r="5" fill="#6E5B46" stroke="#FBF8F1" stroke-width="2"/>
+      <circle cx="17" cy="50" r="9" fill="none" stroke="#6E5B46" stroke-width="1.2" stroke-dasharray="5 3"/>
+      <text class="lg-s" x="30" y="53">Strong inference</text>
+      <circle cx="17" cy="68" r="5" fill="#6E5B46" stroke="#FBF8F1" stroke-width="2"/>
+      <circle cx="17" cy="68" r="9" fill="none" stroke="#6E5B46" stroke-width="1.2" stroke-dasharray="1.5 3"/>
+      <text class="lg-s" x="30" y="71">Speculative</text>
+      <path d="M10,86 L26,86" stroke="#7A5C33" stroke-width="1.6" stroke-dasharray="1.5 4" stroke-linecap="round"/>
+      <text class="lg-s" x="32" y="89">Journey on foot</text>
+      <path d="M10,102 L26,102" stroke="#2F5D62" stroke-width="1.8" stroke-dasharray="7 4"/>
+      <text class="lg-s" x="32" y="105">Journey by boat</text>
+    </g>
+
+    <!-- scale: the text gives day-walks, not survey, so this is declared approximate -->
+    <g transform="translate(520,506)">
+      <path d="M0,0 L120,0 M0,-4 L0,4 M60,-3 L60,3 M120,-4 L120,4" stroke="#6E5B46" stroke-width="1.3"/>
+      <text class="lg-s" x="60" y="-8" text-anchor="middle">approx. 5 miles</text>
+      <text class="lg-s" x="60" y="16" text-anchor="middle" font-style="italic">scale interpretive</text>
+    </g>
+
+    <g transform="translate(636,60)" opacity="0.85">
       <circle r="24" fill="none" stroke="#B08D57" stroke-width="1.2"/>
       <path d="M0,-20 L5,-2 L0,2 L-5,-2 Z" fill="#B08D57"/>
       <text x="0" y="-28" text-anchor="middle" font-family="Cinzel" font-size="9" fill="#B08D57">N</text>
@@ -1442,7 +1722,7 @@ renderEventList();
 renderIslandSvg();
 renderIslandStrip();
 setActiveIndex(0, false);
-map.fitBounds(L.latLngBounds(LOCATIONS.filter(l=>l.scope==='world').map(l=>[l.lat,l.lng])).pad(0.15));
+map.fitBounds(routeBounds());
 </script>
 </body>
 </html>
