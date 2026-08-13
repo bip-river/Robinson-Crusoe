@@ -871,7 +871,7 @@ const LOCATIONS = [
   quote:"my man Friday",
   related:["island-wreck2","friday-father"] },
 
-{ id:"friday-father", order:28, scope:"island", category:"encounter", ix:352, iy:450, lp:"e", ilabel:"Friday's Father",
+{ id:"friday-father", order:28, scope:"island", category:"encounter", ix:350, iy:437, lp:"e", ilabel:"Friday's Father",
   title:"Friday's Father, and a Spaniard", narrativeDate:"Shortly after", calendarDate:"c. 1686",
   confidence:"explicit",
   summary:"In a second raid, Crusoe and Friday free two more prisoners: Friday's own father, and a shipwrecked Spaniard, who tells of other Spaniards stranded on the mainland.",
@@ -1512,16 +1512,141 @@ document.getElementById('themeNight').addEventListener('click', () => applyTheme
    castle stands on the hillside above that bay, the vale and the goat country
    lie inland and east, and the shore the cannibals resort to is the far south-
    west \u2014 the side facing the mainland he could see from the hill.            */
-const ISLAND_OUTLINE =
-  'M170,205 C178,176 200,154 232,144 ' +
-  'C252,138 262,148 272,162 ' +          /* west horn of the bay */
-  'C292,176 316,176 336,160 ' +          /* the bay itself, where he came ashore */
-  'C348,150 362,136 384,130 ' +          /* east horn */
-  'C436,122 486,134 524,158 C562,180 590,206 604,238 ' +
-  'C618,246 630,250 628,258 C626,268 610,272 600,286 ' +   /* the eastern Point */
-  'C586,320 562,352 530,380 C492,412 448,434 400,446 ' +
-  'C352,458 308,458 270,448 C248,442 228,426 214,406 ' +   /* the creek mouth */
-  'C200,384 178,352 172,316 C164,278 162,236 170,205 Z';
+/* --- small geometry helpers, used to build the island from point lists --- */
+
+/* Deterministic PRNG (mulberry32). The scatter of trees, rocks and grass must
+   be identical on every render, or the map would reshuffle itself each time
+   the modal opens. */
+function seeded(seed){
+  return function(){
+    seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/* Catmull-Rom through the points, emitted as cubic beziers — lets the coast
+   and the streams be authored as plain point lists and still draw as curves. */
+function smoothPath(pts, closed){
+  const n = pts.length, out = [];
+  const at = i => pts[(i % n + n) % n];
+  out.push(`M${pts[0][0]},${pts[0][1]}`);
+  const last = closed ? n : n - 1;
+  for (let i = 0; i < last; i++){
+    const p0 = closed ? at(i-1) : pts[Math.max(0,i-1)];
+    const p1 = at(i), p2 = at(i+1);
+    const p3 = closed ? at(i+2) : pts[Math.min(n-1,i+2)];
+    out.push(`C${(p1[0]+(p2[0]-p0[0])/6).toFixed(1)},${(p1[1]+(p2[1]-p0[1])/6).toFixed(1)}` +
+             ` ${(p2[0]-(p3[0]-p1[0])/6).toFixed(1)},${(p2[1]-(p3[1]-p1[1])/6).toFixed(1)}` +
+             ` ${p2[0]},${p2[1]}`);
+  }
+  return out.join(' ') + (closed ? ' Z' : '');
+}
+
+function inPoly(x, y, poly){
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++){
+    const xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+function bbox(poly){
+  const xs = poly.map(p=>p[0]), ys = poly.map(p=>p[1]);
+  return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+}
+
+/* Rejection-sampled points inside a polygon, thinned so nothing clumps. */
+function scatter(poly, count, rand, minGap){
+  const [x0,y0,x1,y1] = bbox(poly), out = [];
+  for (let tries = 0; tries < count * 60 && out.length < count; tries++){
+    const x = x0 + rand()*(x1-x0), y = y0 + rand()*(y1-y0);
+    if (!inPoly(x, y, poly)) continue;
+    if (out.some(p => Math.hypot(p[0]-x, p[1]-y) < minGap)) continue;
+    out.push([x,y]);
+  }
+  return out;
+}
+
+/* Shrink a polygon toward its centroid — used for hill contour rings. */
+function shrink(poly, k){
+  const cx = poly.reduce((s,p)=>s+p[0],0)/poly.length;
+  const cy = poly.reduce((s,p)=>s+p[1],0)/poly.length;
+  return poly.map(p => [cx + (p[0]-cx)*k, cy + (p[1]-cy)*k]);
+}
+
+/* Nudge every point a little. Perfectly concentric contours read as a bullseye
+   and a perfectly fair coast reads as an egg; a couple of pixels of wobble is
+   what makes either look surveyed rather than drawn with a compass. */
+function roughen(poly, amt, rand){
+  return poly.map(p => [p[0] + (rand()-0.5)*amt*2, p[1] + (rand()-0.5)*amt*2]);
+}
+
+/* --- the island itself ---
+   The coast is a point list rather than a hand-tuned bezier so it can carry
+   headlands, coves and a river mouth without becoming unreadable to edit. */
+const COAST = [
+  [165,222],[167,204],[173,188],[183,173],[196,161],[211,152],[227,146],
+  [241,143],[252,147],[259,157],                                                  /* west horn of the bay */
+  [269,169],[281,177],[295,181],[309,180],[322,174],[333,164],                    /* the bay he came ashore in */
+  [342,151],[353,140],[366,132],[381,127],[398,124],
+  [416,124],[434,127],[452,132],[470,138],
+  [487,144],[504,151],[521,159],[537,169],[552,180],[566,192],[579,205],[590,217],[601,227],
+  [614,232],[626,236],[636,243],[641,252],                                        /* the Point */
+  [634,261],[623,266],[612,269],[602,275],
+  [594,289],[585,305],[575,321],[563,337],[550,352],[536,366],
+  [524,378],[516,389],[505,396],                                                  /* headland on the south-east */
+  [490,404],[473,412],[455,420],[436,427],
+  [416,433],[396,439],[375,443],[354,446],[333,449],[312,451],[291,451],
+  [271,448],[253,443],[238,435],[226,425],[217,414],[212,404],                    /* the creek mouth */
+  [206,394],[200,382],[194,369],[189,355],[186,341],
+  [192,330],[199,320],[203,309],[196,299],[186,292],[178,283],                    /* a cove biting into the west shore */
+  [172,271],[168,258],[166,244],[165,232],
+];
+const ISLAND_OUTLINE = smoothPath(roughen(COAST, 2.2, seeded(77001)), true);
+
+/* Two islets offshore — the kind of detail a real chart of this coast would
+   carry, and a reason for the race running as it does off the Point. */
+const ISLETS = [
+  [[652,262],[661,257],[669,263],[667,273],[657,278],[649,271]],
+  [[206,489],[218,484],[227,490],[222,499],[210,500],[201,495]],
+].map(p => smoothPath(p, true));
+
+/* Terrain regions, also point lists: filled, and used to seed their texture. */
+const REGIONS = {
+  savannah:  [[212,262],[226,250],[244,244],[262,247],[278,242],[292,254],[298,270],[292,286],
+              [280,300],[262,310],[242,313],[224,306],[210,294],[203,278]],
+  vale:      [[396,268],[408,254],[424,246],[444,242],[462,247],[478,252],[490,266],[492,282],
+              [482,294],[466,306],[446,312],[426,310],[408,302],[394,286]],
+  woods:     [[300,356],[310,338],[326,328],[346,322],[368,320],[390,324],[410,332],[426,344],
+              [436,358],[434,372],[422,384],[404,394],[382,400],[358,402],[336,396],[316,386],
+              [304,372]],
+  goatHills: [[472,196],[478,182],[490,172],[508,164],[526,163],[544,170],[558,182],[566,196],
+              [564,210],[554,222],[538,230],[518,232],[500,228],[482,216]],
+  castleHill:[[264,212],[270,200],[282,191],[298,187],[314,189],[328,196],[336,206],[334,218],
+              [324,228],[310,234],[292,235],[276,230],[266,222]],
+  /* "so fresh, so green, so flourishing" — the side of the island he finds
+     fruitful, where the melons and grapes grow. */
+  eastWood:  [[496,302],[512,288],[534,284],[554,292],[568,306],[570,324],[560,340],[542,352],
+              [520,354],[502,344],[492,326],[490,312]],
+};
+
+/* Fresh water. The brook rising in the goat hills is what makes the creek a
+   creek; Crusoe's account has him finding running water inland. */
+const STREAMS = [
+  /* the brook out of the goat hills, meandering down to the creek */
+  [[502,226],[488,240],[476,250],[458,258],[446,272],[434,280],[420,292],
+   [408,298],[392,312],[382,322],[366,332],[356,346],[340,356],[330,370],
+   [316,380],[302,392],[286,396],[270,402],[252,403],[236,406],[222,405],[213,407]],
+  /* a lesser brook off Castle Hill, falling to the cove */
+  [[278,228],[266,236],[256,246],[242,252],[232,264],[218,272],[208,284],[198,292],[191,301]],
+];
+
+/* Rocks: off the Point, where the race runs, and by the Spanish wreck. */
+const ROCKS = [[646,236,3],[653,245,2],[643,266,2.4],[640,292,2.2],[655,305,3],[647,313,1.8],
+               [151,196,2.6],[158,187,1.9],[204,432,2.2],[196,441,1.6]];
 
 /* Only journeys Crusoe actually describes making. The old dashed line joined
    the events in date order, which drew eighteen crossings of an island he
@@ -1588,31 +1713,124 @@ function renderIslandSvg(){
       <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
         <path d="M0,0 L10,5 L0,10 z" fill="#3C6E71"/>
       </marker>
+      <clipPath id="landclip"><path d="${ISLAND_OUTLINE}"/></clipPath>
     </defs>
 
     <rect x="0" y="0" width="700" height="560" fill="url(#sea)"/>
-    ${Array.from({length:5}).map((_,i)=>`<path d="M0 ${60+i*110} Q175 ${40+i*110} 350 ${60+i*110} T700 ${60+i*110}" fill="none" stroke="#8fb3ac" stroke-width="1" opacity="0.4"/>`).join('')}
+    ${Array.from({length:5}).map((_,i)=>`<path d="M0 ${60+i*110} Q175 ${40+i*110} 350 ${60+i*110} T700 ${60+i*110}" fill="none" stroke="#8fb3ac" stroke-width="1" opacity="0.35"/>`).join('')}
 
-    <path d="${ISLAND_OUTLINE}" fill="#DCC48F" stroke="#8a6b3d" stroke-width="2.5"/>
+    <!-- soundings: the shelf shoaling in toward the beach -->
+    <path d="${ISLAND_OUTLINE}" fill="none" stroke="#9ac6bd" stroke-width="40" opacity="0.45"/>
+    <path d="${ISLAND_OUTLINE}" fill="none" stroke="#b2d5cd" stroke-width="26" opacity="0.6"/>
+    <path d="${ISLAND_OUTLINE}" fill="none" stroke="#cbe6df" stroke-width="13" opacity="0.85"/>
+    <path d="${ISLAND_OUTLINE}" fill="none" stroke="#7fa9a2" stroke-width="0.7" opacity="0.4" stroke-dasharray="2 6"/>
+    ${ISLETS.map(d => `<path d="${d}" fill="none" stroke="#b2d5cd" stroke-width="12" opacity="0.7"/>`).join('')}
+    ${ROCKS.map(([x,y,r]) => `<ellipse cx="${x}" cy="${y}" rx="${r*1.4}" ry="${r}" fill="#8a8f7d" opacity="0.8"/>`).join('')}
 
-    <!-- terrain: the vale and woods, the goat uplands, the savannah -->
-    <path d="M392,258 C428,240 470,246 486,272 C470,304 424,318 396,304 C380,290 380,268 392,258 Z"
-          fill="#9fae6e" opacity="0.72"/>
-    <path d="M300,340 C346,318 404,326 430,354 C408,390 340,404 302,386 C288,370 290,350 300,340 Z"
-          fill="#7d8f57" opacity="0.6"/>
-    <path d="M470,168 C512,158 556,178 566,206 C540,230 494,236 470,216 C458,200 458,178 470,168 Z"
-          fill="url(#hatch)" opacity="0.55"/>
-    <path d="M210,250 C252,236 286,248 292,276 C270,306 226,312 204,292 C196,276 198,258 210,250 Z"
-          fill="#c9c48d" opacity="0.5"/>
-    <!-- Castle Hill and its rock face -->
-    <path d="M262,200 C284,182 318,184 336,206 C320,232 282,234 262,216 Z" fill="#b7a78a" opacity="0.75"/>
-    <path d="M266,204 L336,208" stroke="#8a6b3d" stroke-width="3" opacity="0.8" stroke-linecap="round"/>
-    <!-- the creek, running up from the south-west shore -->
-    <path d="M206,402 C226,392 248,386 266,384" fill="none" stroke="#a9c9c2" stroke-width="7" stroke-linecap="round"/>
+    <path id="land" d="${ISLAND_OUTLINE}" fill="#D3B87E" stroke="#7d6234" stroke-width="1.8"/>
+    ${ISLETS.map(d => `<path d="${d}" fill="#D3B87E" stroke="#7d6234" stroke-width="1.4"/>`).join('')}
+
+    <g clip-path="url(#landclip)">
+      <!-- the strand: a pale sand rim just inside the coast -->
+      <path d="${ISLAND_OUTLINE}" fill="none" stroke="#F3E8C6" stroke-width="13" opacity="0.95"/>
+      <path d="${ISLAND_OUTLINE}" fill="none" stroke="#c0a469" stroke-width="0.9" opacity="0.45"
+            stroke-dasharray="1 3"/>
+
+      <!-- ground cover -->
+      <path d="${smoothPath(REGIONS.savannah,true)}"  fill="#cfc98f" opacity="0.55"/>
+      <path d="${smoothPath(REGIONS.vale,true)}"      fill="#9fae6e" opacity="0.7"/>
+      <path d="${smoothPath(REGIONS.woods,true)}"     fill="#7d8f57" opacity="0.55"/>
+      <path d="${smoothPath(REGIONS.eastWood,true)}"  fill="#93a465" opacity="0.5"/>
+      <path d="${smoothPath(REGIONS.goatHills,true)}" fill="#c3b394" opacity="0.75"/>
+      <path d="${smoothPath(REGIONS.castleHill,true)}" fill="#bfae8e" opacity="0.8"/>
+
+      <!-- relief: contour rings, each wobbled so they nest like ground rather
+           than stacking into a bullseye -->
+      ${(() => {
+        const rand = seeded(4242);
+        return ['goatHills','castleHill'].map(k =>
+          [0.80,0.60,0.40,0.22].map(f =>
+            `<path d="${smoothPath(roughen(shrink(REGIONS[k],f), 3.4, rand), true)}" fill="none"
+                   stroke="#8a6b3d" stroke-width="0.85" opacity="0.42"/>`).join('')).join('');
+      })()}
+      <!-- the rock face above the castle -->
+      <path d="M266,206 C286,196 312,196 334,208" fill="none" stroke="#7d6234" stroke-width="3.4"
+            opacity="0.85" stroke-linecap="round"/>
+      ${Array.from({length:9}).map((_,i)=>{
+        const t=i/8, x=266+t*68, y=206+Math.sin(t*Math.PI)* -8 + t*2;
+        return `<path d="M${x.toFixed(1)},${y.toFixed(1)} l0,5" stroke="#7d6234" stroke-width="1" opacity="0.6"/>`;
+      }).join('')}
+
+      <!-- Fresh water. Drawn in three overlapping lengths so each brook
+           broadens as it gathers, instead of running at one width throughout. -->
+      ${STREAMS.map((s,i) => {
+        const w = i ? [1.1,1.9,2.8] : [1.4,2.6,4.2];
+        return [0, 0.42, 0.72].map((from,k) =>
+          `<path d="${smoothPath(s.slice(Math.floor(s.length*from)), false)}" fill="none"
+                 stroke="#93bdb6" stroke-width="${w[k]}" stroke-linecap="round"
+                 stroke-linejoin="round" opacity="0.9"/>`).join('');
+      }).join('')}
+      <!-- the creek: the brook's mouth, brackish and wide enough for a canoe -->
+      <path d="M240,404 C232,406 224,407 214,408" fill="none" stroke="#a9c9c2" stroke-width="9"
+            stroke-linecap="round" opacity="0.9"/>
+
+      <!-- Open ground: thin scrub and tussock over everything that is not
+           already wood, vale, hill or savannah, so the interior is not a blank. -->
+      ${(() => {
+        const rand = seeded(1719);
+        const busy = [REGIONS.woods, REGIONS.vale, REGIONS.goatHills,
+                      REGIONS.castleHill, REGIONS.savannah, REGIONS.eastWood];
+        return scatter(shrink(COAST, 0.9), 420, rand, 9)
+          .filter(p => !busy.some(r => inPoly(p[0], p[1], r)))
+          .map(p => {
+            const x = p[0].toFixed(1), y = p[1].toFixed(1);
+            return rand() < 0.42
+              ? `<circle cx="${x}" cy="${y}" r="${(1.3+rand()*1.2).toFixed(1)}" fill="#8a8550" opacity="0.55"/>`
+              : `<path d="M${x},${y} l2.3,-3.0 M${x},${y} l-1.9,-2.6" stroke="#9c9254"
+                       stroke-width="0.85" opacity="0.6"/>`;
+          }).join('');
+      })()}
+
+      <!-- Woodland. Three passes over successively smaller cores give a stand
+           that is dense inside and frays at the margins, the way a wood does,
+           rather than a uniform oval of identical dots. -->
+      ${(() => {
+        const rand = seeded(16590930);            /* the day he came ashore */
+        const cols = ['#5b6c34','#6b7d3f','#51602c','#75874a'];
+        const tree = p => {
+          const r = 2.4 + rand()*2.0;
+          const c = cols[Math.floor(rand()*cols.length)];
+          return `<circle cx="${p[0].toFixed(1)}" cy="${(p[1]+r*0.25).toFixed(1)}" r="${r.toFixed(1)}"
+                          fill="#46542a" opacity="0.35"/>` +
+                 `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r.toFixed(1)}"
+                          fill="${c}" opacity="0.92"/>`;
+        };
+        const w = REGIONS.woods;
+        return [ ...scatter(w, 62, rand, 9),
+                 ...scatter(shrink(w,0.72), 40, rand, 7.5),
+                 ...scatter(shrink(w,0.44), 20, rand, 6.5),
+                 ...scatter(REGIONS.vale, 34, rand, 12),
+                 ...scatter(shrink(REGIONS.vale,0.6), 14, rand, 10),
+                 ...scatter(REGIONS.eastWood, 40, rand, 11),
+                 ...scatter(shrink(REGIONS.eastWood,0.62), 18, rand, 9),
+                 ...scatter(REGIONS.castleHill, 5, rand, 15) ].map(tree).join('');
+      })()}
+
+      <!-- grass on the savannah, scrub on the goat hills -->
+      ${(() => {
+        const rand = seeded(1659);
+        return scatter(REGIONS.savannah, 70, rand, 9).map(p =>
+          `<path d="M${p[0].toFixed(1)},${p[1].toFixed(1)} l2.6,-3.4 M${p[0].toFixed(1)},${p[1].toFixed(1)} l-2.2,-3"
+                 stroke="#a89a5e" stroke-width="0.9" opacity="0.75"/>`).join('')
+             + scatter(REGIONS.goatHills, 44, rand, 10).map(p =>
+          `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="1.1" fill="#8a7b5c" opacity="0.7"/>`).join('');
+      })()}
+    </g>
+
     <!-- the race off the eastern point -->
-    <g opacity="0.75">
-      <path d="M624,236 C650,252 650,280 626,296" fill="none" stroke="#3C6E71" stroke-width="1.6" marker-end="url(#arrow)"/>
-      <path d="M636,214 C668,240 668,292 638,318" fill="none" stroke="#3C6E71" stroke-width="1.2" opacity="0.7"/>
+    <g opacity="0.8">
+      <path d="M636,232 C662,250 662,282 638,300" fill="none" stroke="#3C6E71" stroke-width="1.6" marker-end="url(#arrow)"/>
+      <path d="M648,214 C680,242 680,296 650,322" fill="none" stroke="#3C6E71" stroke-width="1.2" opacity="0.7"/>
     </g>
 
     ${feature(300,116,'THE BAY','sea-lbl')}
@@ -1698,7 +1916,18 @@ function renderIslandStrip(){
   });
 }
 
+/* The island plate is a few hundred elements of coastline, relief and wood.
+   Build it the first time it is actually asked for rather than on every page
+   load, most of which never open it. */
+let islandDrawn = false;
+function ensureIslandSvg(){
+  if (islandDrawn) return;
+  renderIslandSvg();
+  islandDrawn = true;
+}
+
 window.openIslandModal = function(id){
+  ensureIslandSvg();
   document.getElementById('islandModal').classList.add('show');
   const fallback = timelineEvents[state.lastIslandIndex] ? timelineEvents[state.lastIslandIndex].id : 'island-landing';
   showIslandDetail(id || fallback);
@@ -1719,8 +1948,7 @@ renderChipsAndLegend();
 renderMarkers();
 renderTicks();
 renderEventList();
-renderIslandSvg();
-renderIslandStrip();
+renderIslandStrip();   /* the island plate itself is drawn on first open */
 setActiveIndex(0, false);
 map.fitBounds(routeBounds());
 </script>
