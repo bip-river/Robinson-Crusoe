@@ -11,6 +11,17 @@ An interactive map and timeline of every voyage, coast, and camp in Daniel Defoe
   the Guinea coast, captivity in Salé, Brazil, and the wreck, to his eventual return; plus
   18 on a reconstructed plan of the island itself (the castle, the bower, the corn ground,
   the footprint in the sand).
+- **An island drawn as geography, not as a list** — a named coastline with the bay he came
+  ashore in, the creek where he kept his canoe, Castle Hill and its rock face, the vale, the
+  goat country and the far shore the cannibals resorted to, with the bearing to the mainland
+  he could see from the high ground. The only tracks drawn are journeys he actually describes
+  making: his circuit to the bower and the enclosures, the raft trips out to the wreck, and
+  the canoe voyage that nearly carried him away on the current.
+- **Routes a ship could actually have sailed** — the voyages follow period tracks rather than
+  straight lines: down Channel and out past the Canaries and Cape Verde on the trades, the
+  wide westward arc to Brazil, and the return north on the Gulf Stream and east on the
+  westerlies. The last leg home from Lisbon is drawn overland across Spain and the Pyrenees,
+  because that is how Crusoe travels it, having had enough of the sea.
 - **A scrubable timeline** that walks the narrative in order, with play/step controls, each
   event carrying its narrative date, its calendar date, a summary, and the quotation from
   the novel it rests on.
